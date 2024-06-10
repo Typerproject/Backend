@@ -6,6 +6,8 @@ var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+const reportRouter=require('./routes/report');
+const cors=require("cors");
 
 var app = express();
 
@@ -19,8 +21,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
+app.use(cors());
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/report',reportRouter);
 
 //mongodb연결을위해 비밀번호 가림
 const dotenv = require("dotenv");
