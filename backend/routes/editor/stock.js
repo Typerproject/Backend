@@ -23,7 +23,18 @@ router.get("/", async (req, res) => {
     });
     console.log("성공!");
 
-    res.status(200).json(apiResp);
+    res.status(200).json({
+      stockTitle: apiResp.output1.hts_kor_isnm,
+      data: apiResp.output2.map((ele) => {
+        return {
+          open: ele.stck_oprc,
+          high: ele.stck_hgpr,
+          low: ele.stck_lwpr,
+          close: ele.stck_clpr,
+          date: ele.stck_bsop_date,
+        };
+      }),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).send("Error fetching data");
