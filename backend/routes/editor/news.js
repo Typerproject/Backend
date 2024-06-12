@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { newsCrawler } = require("../../crawler/newsCrawler");
+const { newsCrawler } = require("../../../crawler/newsCrawler");
 const validUrl = require('valid-url');
 
 router.post("/", async function (req, res) {
