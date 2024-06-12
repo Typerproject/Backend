@@ -6,11 +6,8 @@ var router = express.Router();
 
 dotenv.config();
 
-const User = require("../../model/user");
-const {
-  getKakaoToken,
-  authenticateJWT,
-} = require("../../utils/authenticateJWT");
+const User = require("../model/user");
+const { getKakaoToken, authenticateJWT } = require("../utils/authenticateJWT");
 
 const jwtSecret = process.env.JWT_SECRET;
 
