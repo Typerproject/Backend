@@ -21,7 +21,7 @@ router.use(
   reportRouter
 );
 
-route.use(
+router.use(
   "/editor/finance",
   (req, res, next) => {
     next();
