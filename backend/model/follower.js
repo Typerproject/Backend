@@ -1,16 +1,41 @@
-const mongoose =require("mongoose")
+const mongoose = require("mongoose");
 
-const followerSchema=new mongoose.Schema(
-    {
-        following_userId: { type: [String], required: true }, 
-        following_userId: { type: [String], required: true }, 
-        userId:{type:String,required:true}
-    },{
-        timestamps:true,
-    }
-
-
-
+const followerSchema = new mongoose.Schema(
+  {
+    // _id를 의미함
+    following_userId: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "user",
+      default: [],
+    },
+    follower_userId: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "user",
+      default: [],
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
 
-module.exports=mongoose.model("follow",followerSchema);
+followerSchema.statics.enroll = async function (userId) {
+  try {
+    const follower = await this.create({
+      userId,
+    });
+
+    return follower;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const Follower = mongoose.model("follower", followerSchema);
+
+module.exports = Follower;
