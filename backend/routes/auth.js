@@ -7,6 +7,7 @@ var router = express.Router();
 dotenv.config();
 
 const User = require("../model/user");
+const Follower = require("../model/follower");
 const { getKakaoToken, authenticateJWT } = require("../utils/authenticateJWT");
 
 const jwtSecret = process.env.JWT_SECRET;
@@ -36,6 +37,8 @@ router.post("/", async (req, res) => {
     //사용자의 닉넴
     const user = userResponse.data;
 
+    console.log(user);
+
     const existingUser = await User.findOne({ userId: user.id });
 
     if (!existingUser) {
@@ -47,6 +50,8 @@ router.post("/", async (req, res) => {
         tokens.access_token,
         tokens.refresh_token
       );
+
+      await Follower.enroll(newUser._id);
 
       const jwtPayload = {
         _id: newUser._id,

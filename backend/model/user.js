@@ -7,8 +7,8 @@ const kakaoTokenSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true },
-    nickname: { type: String, required: true, unique: true },
+    userId: { type: String, required: true, unique: true },
+    nickname: { type: String, required: true },
     email: { type: String, required: true },
     comment: { type: String, default: null },
     profile: { type: String, required: true },
@@ -40,6 +40,7 @@ userSchema.statics.enroll = async function (
     });
 
     return {
+      _id: user._id,
       userId: user.userId,
       nickname: user.nickname,
     };
@@ -48,6 +49,6 @@ userSchema.statics.enroll = async function (
   }
 };
 
-const User = mongoose.model("User", userSchema);
+const User = mongoose.model("user", userSchema);
 
 module.exports = User;
