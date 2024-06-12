@@ -1,8 +1,8 @@
 var express = require("express");
 var router = express.Router();
 
-const User = require("../../../model/user");
-const { authenticateJWT } = require("../../../utils/authenticateJWT");
+const User = require("../model/user");
+const { authenticateJWT } = require("../utils/authenticateJWT");
 
 // 테스트용 코드
 router.get("/", authenticateJWT, async (req, res, next) => {
