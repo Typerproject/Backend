@@ -1,6 +1,7 @@
 const stockRouter = require("./editor/stock");
 const reportRouter = require("./editor/report");
 const financeRouter = require("./editor/finance");
+const newsRouter = require("./editor/news");
 
 var express = require("express");
 var router = express.Router();
@@ -28,5 +29,10 @@ router.use(
   },
   financeRouter
 );
+
+router.use(
+  "/editor/news",
+  newsRouter
+)
 
 module.exports = router;
