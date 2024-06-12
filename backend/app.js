@@ -7,6 +7,7 @@ var logger = require("morgan");
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 const apiRouter = require("./routes/api");
+const authRouter = require("./routes/api/auth");
 const cors = require("cors");
 
 var app = express();
@@ -25,12 +26,13 @@ app.use(cors());
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use("/api", apiRouter);
+app.use("/auth", authRouter);
 
 //mongodb연결을위해 비밀번호 가림
 const dotenv = require("dotenv");
 dotenv.config();
 
-//mongodb 연결
+// mongodb 연결
 const mongoose = require("mongoose");
 const { getOAuth } = require("./utils/stockAuth");
 mongoose
