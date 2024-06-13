@@ -82,7 +82,10 @@ const authenticateJWT = async (req, res, next) => {
       return;
     }
   } catch (error) {
-    res.status(401).json({ message: "유효한 토큰이 아님" });
+    res.status(401).json({
+      message: "유효한 토큰이 아님",
+      reason: error,
+    });
     return;
   }
 
