@@ -2,9 +2,11 @@ var express = require("express");
 var router = express.Router();
 
 const User = require("../model/user");
+const Follower = require("../model/follower");
+
 const { authenticateJWT } = require("../utils/authenticateJWT");
 
-// 테스트용 코드
+// 인증 테스트 api
 router.get("/", authenticateJWT, async (req, res, next) => {
   try {
     const user = req.user;
@@ -14,6 +16,206 @@ router.get("/", authenticateJWT, async (req, res, next) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("유저 정보 조회 에러", error);
+    next(error);
+  }
+});
+
+// 마이페이지에 유저 정보를 띄우기 위한 api
+router.get("/info/:_id", async (req, res, next) => {
+  try {
+    const userId = req.params._id;
+    const userData = await User.findById(userId);
+
+    if (!userData) {
+      return res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
+    }
+
+    return res.status(200).json({
+      _id: userData._id,
+      nickname: userData.nickname,
+      comment: userData.comment,
+      profile: userData.profile,
+    });
+  } catch (error) {
+    console.error("마이페이지에 유저 정보를 띄우기 위한 api 에러: ", error);
+    next(error);
+  }
+});
+
+// 유저의 팔로워 수와 팔로우 한 사람의 수 + 유저 리스트까지
+router.get("/follower/:_id", async (req, res, next) => {
+  try {
+    const followerData = await Follower.getFollowerCountsAndFollowerUser(
+      req.params._id
+    );
+
+    return res.status(200).json(followerData);
+  } catch (error) {
+    console.error("팔로우 수 정보 api 에러: ", error);
+    next(error);
+  }
+});
+
+// 유저 한 줄 소개 수정 api
+// 이거 실행되면 프론트 전역변수 수정해줘야 할듯
+// 인증 必
+router.put("/comment", authenticateJWT, async (req, res, next) => {
+  try {
+    // 바디에서 comment 값 받아서 처리
+    const newComment = { comment: req.body.comment };
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, newComment, {
+      new: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "업데이트 성공", comment: updatedUser.comment });
+  } catch (error) {
+    console.error("유저 한 줄 소개 수정 api 에러: ", error);
+    next(error);
+  }
+});
+
+// 내가 누군가를 팔로우 하는 api
+// 인증 必
+router.post("/following", authenticateJWT, async (req, res, next) => {
+  try {
+    // 팔로잉 하려는 유저의 id
+    // 바디로 받아서 처리
+    const targetUserId = req.body._id;
+
+    // 내 아이디
+    const currentUserId = req.user._id;
+
+    // 팔로잉 함
+    const result = await Follower.updateOne(
+      { userId: currentUserId },
+      { $addToSet: { following_userId: targetUserId } } // addToSet을 사용하면 중복 추가를 방지한다고 함
+    );
+
+    if (result.nModified === 0) {
+      return res.status(404).json({
+        message:
+          "result, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+      });
+    }
+
+    console.log("result: ", result);
+
+    // 상대방 팔로워에 내 아이디 추가
+    const check = await Follower.updateOne(
+      { userId: targetUserId },
+      { $addToSet: { follower_userId: currentUserId } }
+    );
+
+    if (check.nModified === 0) {
+      return res.status(404).json({
+        message:
+          "check, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+      });
+    }
+
+    console.log("check: ", check);
+
+    res.status(200).json({ message: "팔로우 성공!" });
+  } catch (error) {
+    console.error("내가 누군가를 팔로우 하는 api 에러: ", error);
+    next(error);
+  }
+});
+
+// 팔로잉 취소 api
+router.delete("/following/:_id", authenticateJWT, async (req, res, next) => {
+  try {
+    // 취소하려는 유저의 아이디
+    const targetUserId = req.params._id;
+
+    // 현재 내 아이디
+    const currentUserId = req.user._id;
+
+    // 내가 팔로잉 했던 사람을 제거
+    const result = await Follower.updateOne(
+      { userId: currentUserId },
+      { $pull: { following_userId: targetUserId } }
+    );
+
+    console.log("업데이트 체크: ", result.nModified);
+
+    if (result.nModified === 0) {
+      return res.status(404).json({
+        message:
+          "result, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+      });
+    }
+
+    const check = await Follower.updateOne(
+      { userId: targetUserId },
+      { $pull: { follower_userId: currentUserId } }
+    );
+
+    console.log("check: ", check);
+
+    if (check.nModified === 0) {
+      return res.status(404).json({
+        message:
+          "유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+      });
+    }
+
+    res.status(200).json({ message: "언팔 성공!" });
+  } catch (error) {
+    console.error("팔로잉 취소 api 에러: ", error);
+    next(error);
+  }
+});
+
+// 팔로워를 제거 api
+router.delete("/follower/:_id", authenticateJWT, async (req, res, next) => {
+  try {
+    // 제거하려는 유저의 아이디
+    const targetUserId = req.params._id;
+
+    // 현재 내 아이디
+    const currentUserId = req.user._id;
+
+    // 내가 팔로잉 했던 사람을 제거
+    const result = await Follower.updateOne(
+      { userId: currentUserId },
+      { $pull: { follower_userId: targetUserId } }
+    );
+
+    console.log("업데이트 체크: ", result.nModified);
+
+    if (result.nModified === 0) {
+      return res.status(404).json({
+        message:
+          "result, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+      });
+    }
+
+    const check = await Follower.updateOne(
+      { userId: targetUserId },
+      { $pull: { following_userId: currentUserId } }
+    );
+
+    console.log("check: ", check);
+
+    if (check.nModified === 0) {
+      return res.status(404).json({
+        message:
+          "유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+      });
+    }
+
+    res.status(200).json({ message: "언팔 성공!" });
+  } catch (error) {
+    console.error("팔로워를 제거 api 에러: ", error);
+    next(error);
   }
 });
 

@@ -6,7 +6,7 @@ var logger = require("morgan");
 
 const apiRouter = require("./routes/api");
 const authRouter = require("./routes/auth");
-const infoRouter = require("./routes/user");
+const userRouter = require("./routes/user");
 const postRouter = require("./routes/post");
 
 const cors = require("cors");
@@ -26,7 +26,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use("/api", apiRouter);
 app.use("/auth", authRouter);
-app.use("/info", infoRouter);
+app.use("/user", userRouter);
 app.use("/post", postRouter);
 
 //mongodb연결을위해 비밀번호 가림

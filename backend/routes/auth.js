@@ -53,7 +53,7 @@ router.post("/", async (req, res) => {
 
       await Follower.enroll(newUser._id);
 
-      const jwtPayload = {
+      const userData = {
         _id: newUser._id,
         nickname: newUser.nickname,
         email: newUser.email,
@@ -61,13 +61,18 @@ router.post("/", async (req, res) => {
         profile: newUser.profile,
       };
 
-      const jwtToken = jwt.sign(jwtPayload, jwtSecret, {
+      const jwtToken = jwt.sign(userData, jwtSecret, {
         expiresIn: tokens.expires_in,
       });
 
+      // 쿠키 설정
+      res.cookie("authToken", jwtToken, {
+        httpOnly: true,
+        maxAge: tokens.expires_in,
+      });
+
       res.status(201).json({
-        user: jwtPayload,
-        token: jwtToken,
+        user: userData,
       });
     } else {
       // 기존 유저가 있으면 토큰 갱신
@@ -77,20 +82,25 @@ router.post("/", async (req, res) => {
       await existingUser.save();
 
       // JWT 생성
-      const jwtPayload = {
+      const userData = {
         _id: existingUser._id,
         nickname: existingUser.nickname,
         email: existingUser.email,
         comment: existingUser.comment,
         profile: existingUser.profile,
       };
-      const jwtToken = jwt.sign(jwtPayload, jwtSecret, {
+      const jwtToken = jwt.sign(userData, jwtSecret, {
         expiresIn: tokens.expires_in,
       });
 
+      // 쿠키 설정
+      res.cookie("authToken", jwtToken, {
+        httpOnly: true,
+        maxAge: tokens.expires_in,
+      });
+
       res.status(200).json({
-        user: jwtPayload,
-        token: jwtToken,
+        user: userData,
       });
     }
   } catch (error) {
