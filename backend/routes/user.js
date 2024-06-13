@@ -27,7 +27,8 @@ router.get("/info/:_id", async (req, res, next) => {
     const userData = await User.findById(userId);
 
     if (!userData) {
-      return res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
+      res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
+      return;
     }
 
     return res.status(200).json({
@@ -49,7 +50,7 @@ router.get("/follower/:_id", async (req, res, next) => {
       req.params._id
     );
 
-    return res.status(200).json(followerData);
+    res.status(200).json(followerData);
   } catch (error) {
     console.error("팔로우 수 정보 api 에러: ", error);
     next(error);
@@ -69,7 +70,8 @@ router.put("/comment", authenticateJWT, async (req, res, next) => {
     });
 
     if (!updatedUser) {
-      return res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
+      res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
+      return;
     }
 
     res
@@ -92,17 +94,37 @@ router.post("/following", authenticateJWT, async (req, res, next) => {
     // 내 아이디
     const currentUserId = req.user._id;
 
+    // 팔로잉 배열의 길이 확인 (추가 전)
+    const currentUser = await Follower.findOne({ userId: currentUserId });
+    const initialFollowingCount = currentUser.following_userId.length;
+
+    console.log("initialFollowingCount", initialFollowingCount);
+
     // 팔로잉 함
     const result = await Follower.updateOne(
       { userId: currentUserId },
       { $addToSet: { following_userId: targetUserId } } // addToSet을 사용하면 중복 추가를 방지한다고 함
     );
 
+    // 팔로잉 배열의 길이 확인 (추가 후)
+    const updatedUser = await Follower.findOne({ userId: currentUserId });
+    const updatedFollowingCount = updatedUser.following_userId.length;
+
+    if (initialFollowingCount === updatedFollowingCount) {
+      res.status(400).json({
+        message: "이미 팔로우하고 있는 유저입니다.",
+        response: false,
+      });
+      return;
+    }
+
     if (result.nModified === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         message:
           "result, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+        response: false,
       });
+      return;
     }
 
     console.log("result: ", result);
@@ -114,15 +136,17 @@ router.post("/following", authenticateJWT, async (req, res, next) => {
     );
 
     if (check.nModified === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         message:
           "check, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+        response: false,
       });
+      return;
     }
 
     console.log("check: ", check);
 
-    res.status(200).json({ message: "팔로우 성공!" });
+    res.status(200).json({ message: "팔로우 성공!", response: true });
   } catch (error) {
     console.error("내가 누군가를 팔로우 하는 api 에러: ", error);
     next(error);
@@ -147,10 +171,12 @@ router.delete("/following/:_id", authenticateJWT, async (req, res, next) => {
     console.log("업데이트 체크: ", result.nModified);
 
     if (result.nModified === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         message:
           "result, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+        response: false,
       });
+      return;
     }
 
     const check = await Follower.updateOne(
@@ -161,13 +187,15 @@ router.delete("/following/:_id", authenticateJWT, async (req, res, next) => {
     console.log("check: ", check);
 
     if (check.nModified === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         message:
           "유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+        response: false,
       });
+      return;
     }
 
-    res.status(200).json({ message: "언팔 성공!" });
+    res.status(200).json({ message: "언팔 성공!", response: true });
   } catch (error) {
     console.error("팔로잉 취소 api 에러: ", error);
     next(error);
@@ -192,10 +220,12 @@ router.delete("/follower/:_id", authenticateJWT, async (req, res, next) => {
     console.log("업데이트 체크: ", result.nModified);
 
     if (result.nModified === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         message:
           "result, 유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+        response: false,
       });
+      return;
     }
 
     const check = await Follower.updateOne(
@@ -206,15 +236,61 @@ router.delete("/follower/:_id", authenticateJWT, async (req, res, next) => {
     console.log("check: ", check);
 
     if (check.nModified === 0) {
-      return res.status(404).json({
+      res.status(404).json({
         message:
           "유저 정보가 없거나 팔로잉을 취소하려는 유저의 데이터가 없습니다.",
+        response: false,
       });
+      return;
     }
 
-    res.status(200).json({ message: "언팔 성공!" });
+    res.status(200).json({ message: "언팔 성공!", response: true });
   } catch (error) {
     console.error("팔로워를 제거 api 에러: ", error);
+    next(error);
+  }
+});
+
+// 닉네임 변경 api
+router.put("/nickname", authenticateJWT, async (req, res, next) => {
+  // const userId = req.user._id;
+
+  // const newNickname = req.body.nickname;
+
+  // await User.findOneAndUpdate(userId, newNickname, {
+  //   new: true,
+  // })
+  //   .then((result) => {
+  //     console.log("닉넴 변경 api result", result);
+  //     res.status(200).json(newNickname);
+  //   })
+  //   .catch((err) => {
+  //     console.error(err);
+  //     res.status(500).json({ message: "닉네임 변경 api 에러", error: err });
+  //     return;
+  //   });
+
+  try {
+    const userId = req.user._id;
+
+    const newNickname = req.body.nickname;
+
+    console.log("ldldldldldlddl", newNickname);
+
+    const updatedUser = await User.findOneAndUpdate(
+      userId,
+      { nickname: newNickname },
+      {
+        new: true,
+      }
+    );
+
+    console.log("닉넴 변경 updated", updatedUser);
+
+    res.status(200).json(newNickname);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "닉네임 변경 api 에러", error: error });
     next(error);
   }
 });
