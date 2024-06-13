@@ -1,19 +1,22 @@
-const mongoose =require("mongoose")
+const mongoose = require("mongoose");
 
-const postSchema=new mongoose.Schema(
-    {
-        postId:{type:Number,required:true},
-        userId:{type:String,required:true,unique:true},
-        ratelist:{type:[String],required:true},
-        title:{type:String,required:true},
-        content:{type:String,required:true},
-        secret:{type:Boolean,required:true,default:false}
-    },{
-        timestamps:true,
-    }
+const blockSchema = new mongoose.Schema({
+  time: { type: Number, required: true },
+  version: { type: String, required: true },
+  blocks: { type: [Object] },
+});
 
-
-
+const postSchema = new mongoose.Schema(
+  {
+    userId: { type: String, required: true },
+    title: { type: Object, required: true },
+    content: { type: blockSchema, required: true },
+    public: { type: Boolean, required: true },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 );
 
-module.exports=mongoose.model("post",postSchema);
+module.exports = mongoose.model("post", postSchema);

@@ -20,7 +20,8 @@ router.post("/", async (req, res) => {
 
   // 토큰 발급
   if (!code) {
-    return res.status(400).send("인가 코드가 필요합니다!");
+    res.status(400).send("인가 코드가 필요합니다!");
+    return;
   }
 
   try {
@@ -68,7 +69,9 @@ router.post("/", async (req, res) => {
       // 쿠키 설정
       res.cookie("authToken", jwtToken, {
         httpOnly: true,
-        maxAge: tokens.expires_in,
+        maxAge: 3600000 * 2,
+        secure: false,
+        samSite: false,
       });
 
       res.status(201).json({
@@ -96,7 +99,7 @@ router.post("/", async (req, res) => {
       // 쿠키 설정
       res.cookie("authToken", jwtToken, {
         httpOnly: true,
-        maxAge: tokens.expires_in,
+        maxAge: 3600000 * 2,
       });
 
       res.status(200).json({
@@ -105,7 +108,10 @@ router.post("/", async (req, res) => {
     }
   } catch (error) {
     console.error("Error enrolling user:", error);
-    res.status(500).send("서버 오류");
+    res.status(500).send({
+      msg: "카카오 토큰 발급중 에러 발생",
+      reason: error,
+    });
   }
 });
 

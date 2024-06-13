@@ -9,7 +9,6 @@ const jwtSecret = process.env.JWT_SECRET;
 
 const authenticateJWT = async (req, res, next) => {
   let token = req.cookies.authToken;
-
   try {
     const decode = jwt.verify(token, jwtSecret);
 
@@ -55,17 +54,18 @@ const authenticateJWT = async (req, res, next) => {
         } catch (refreshError) {
           // 리프레시 토큰이 유효하지 않은 경우 다시 로그인 요청
           if (refreshError.response && refreshError.response.status === 401) {
-            return res.status(401).json({ message: "다시 로그인해주세요." });
+            res.status(401).json({ message: "다시 로그인해주세요." });
+            return;
           }
           throw refreshError;
         }
       } else {
         // 토큰이 유효하고 새로고침이 필요 없는 경우
-        const remainingTime = decoded.exp * 1000 - Date.now();
-        res.cookie("authToken", token, {
-          httpOnly: true,
-          maxAge: remainingTime,
-        });
+        // const remainingTime = decoded.exp * 1000 - Date.now();
+        // res.cookie("authToken", token, {
+        //   httpOnly: true,
+        //   maxAge: remainingTime + 999999,
+        // });
 
         const userData = {
           _id: user._id,
@@ -74,15 +74,16 @@ const authenticateJWT = async (req, res, next) => {
           comment: user.comment,
           profile: user.profile,
         };
-
         req.user = userData; // 유저 정보를 req 객체에 저장
         next();
       }
     } else {
-      res.sendStatus(403).json({ message: "사용자 정보를 찾을 수 없음" }); // 사용자 정보가 없으면 403 반환
+      res.status(403).json({ message: "사용자 정보를 찾을 수 없음" }); // 사용자 정보가 없으면 403 반환
+      return;
     }
   } catch (error) {
-    return res.sendStatus(401).json({ message: "유효한 토큰이 아님" });
+    res.status(401).json({ message: "유효한 토큰이 아님" });
+    return;
   }
 
   // const authHeader = req.headers.authorization;
