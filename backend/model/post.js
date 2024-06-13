@@ -12,6 +12,12 @@ const postSchema = new mongoose.Schema(
     title: { type: Object, required: true },
     content: { type: blockSchema, required: true },
     public: { type: Boolean, required: true },
+    
+    scrapingUsers : {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "user",
+      default: [],
+    }
   },
   {
     timestamps: true,
