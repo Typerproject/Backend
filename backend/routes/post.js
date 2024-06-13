@@ -2,12 +2,12 @@ var express = require("express");
 var router = express.Router();
 const Post = require("../model/post");
 const User = require("../model/user");
+const { authenticateJWT } = require("../utils/authenticateJWT");
 
-router.post("/", async (req, res) => {
-  const userId = req.header("userId");
+router.post("/", authenticateJWT, async (req, res) => {
   const body = req.body;
 
-  const user = await User.findOne({ userId: userId });
+  const user = await User.findById(req.user._id);
 
   if (!user) {
     res
@@ -16,8 +16,11 @@ router.post("/", async (req, res) => {
     return;
   }
 
+  console.log(body.content);
+  console.log(typeof body.content);
+
   Post.create({
-    userId: userId,
+    userId: user._id,
     title: body.title,
     content: body.content,
     public: body.public,
@@ -26,6 +29,7 @@ router.post("/", async (req, res) => {
       res.status(201).json(data);
     })
     .catch((err) => {
+      console.log(err);
       res.status(500).json(err);
     });
 });
