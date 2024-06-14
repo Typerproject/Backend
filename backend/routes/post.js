@@ -3,6 +3,7 @@ var router = express.Router();
 const Post = require("../model/post");
 const User = require("../model/user");
 const { authenticateJWT } = require("../utils/authenticateJWT");
+const mongoose = require("mongoose");
 
 router.post("/", authenticateJWT, async (req, res) => {
   const body = req.body;
@@ -52,6 +53,72 @@ router.get("/", (req, res) => {
         reason: err,
       });
     });
+});
+
+router.post("/scrap", authenticateJWT, async (req, res) => {
+  // console.log(req.user);
+  // console.log(req.body);
+
+  const {_id: userId} = req.user;
+  const {postId} = req.body;
+  if (!postId) {
+    return res.status(400).json({
+      msg: "postId는 필수 입력 값입니다.",
+    })
+  }
+
+  if(!userId) {
+    return res.status(404).json({
+      msg: "user 정보를 찾을 수 있습니다."
+    })
+  }
+
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction(); 
+
+    await User.updateOne(
+      {_id: userId}, 
+      { //userId로 찾기
+      $addToSet: {//배열 필드에 값을 추가할 때 사용하는 연산자
+        scrappedPosts: postId //scrappedPosts에 postId 추가
+        }
+      }, 
+      {session}
+    );//아까 시작한 트랜잭션 세션
+
+    await Post.updateOne(
+      {_id: postId},
+      {
+        $addToSet: {
+          scrapingUsers: userId
+        }
+      },
+      {session}
+    );
+
+    await session.commitTransaction();// 성공 시 커밋
+  } 
+  catch (err) {
+    await session.abortTransaction();
+
+    console.log("scrap failed : ", err);
+
+    return res.status(500).json({
+      msg: "스크랩에 실패하였습니다.",
+      reason: err,
+    })
+  } 
+  finally {
+    session.endSession();
+  }
+
+  return res.json({
+    msg: "스크랩에 성공하였습니다.",
+    postId: postId,
+    userId: userId,
+  });
 });
 
 module.exports = router;
