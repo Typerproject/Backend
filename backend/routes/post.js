@@ -73,6 +73,17 @@ router.post("/scrap", authenticateJWT, async (req, res) => {
     })
   }
 
+  // 이미 스크랩 된 경우 check
+  const isScrappedPost = await User.find({_id: userId, scrappedPosts: postId});
+
+  const isScrappedUser = await Post.find({_id: postId, scrapingUsers: userId});
+
+  if(isScrappedPost || isScrappedUser) {
+    return res.status(409).json({
+      msg: "이미 스크랩된 post입니다."
+    })
+  }
+
   const session = await mongoose.startSession();
 
   try {
