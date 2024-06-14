@@ -2,6 +2,7 @@ var express = require("express");
 var router = express.Router();
 const Post = require("../model/post");
 const User = require("../model/user");
+const { ObjectId } = require("mongodb");
 const { authenticateJWT } = require("../utils/authenticateJWT");
 
 router.post("/", authenticateJWT, async (req, res) => {
@@ -36,7 +37,7 @@ router.post("/", authenticateJWT, async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const post = await Post.findById(req.query.postId);
+    const post = await Post.findById(new ObjectId(req.query.postId));
 
     if (!post) {
       res.status(404).json({
