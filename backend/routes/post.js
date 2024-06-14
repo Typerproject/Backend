@@ -78,7 +78,9 @@ router.post("/scrap", authenticateJWT, async (req, res) => {
 
   const isScrappedUser = await Post.find({_id: postId, scrapingUsers: userId});
 
-  if(isScrappedPost || isScrappedUser) {
+  console.log(isScrappedPost, isScrappedUser);
+
+  if(isScrappedPost.length !==0 || isScrappedUser.length !== 0) {
     return res.status(409).json({
       msg: "이미 스크랩된 post입니다."
     })
