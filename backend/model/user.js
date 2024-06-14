@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema(
     comment: { type: String, default: null },
     profile: { type: String, required: true },
     token: kakaoTokenSchema,
+
+    scrappedPosts: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "post",
+      default: [],
+    }
   },
   {
     timestamps: true,
