@@ -221,4 +221,29 @@ router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
   });
 });
 
+router.get("/scrap/list", authenticateJWT, async (req, res) => {
+  const {_id: userId} = req.user;
+
+  const scrapList = await User.findOne({
+    _id: userId,
+  })
+  .populate({
+    path: "scrappedPosts",
+    select: "_id userId title updatedAt"
+  });
+  console.log(scrapList.scrappedPosts); 
+
+  if(scrapList.scrappedPosts.length === 0) {
+    res.status(200).json({
+      msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
+      scrappedPosts: []
+    })
+  }
+
+  return res.status(200).json({
+    scrappedPosts: scrapList.scrappedPosts
+  });
+
+})
+
 module.exports = router;
