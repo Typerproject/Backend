@@ -47,6 +47,7 @@ const authenticateJWT = async (req, res, next) => {
           res.cookie("authToken", newToken, {
             httpOnly: true,
             maxAge: newTokens.expires_in * 1000,
+            sameSite: "None",
           });
 
           req.user = userData; // 유저 정보를 req 객체에 저장
@@ -82,7 +83,10 @@ const authenticateJWT = async (req, res, next) => {
       return;
     }
   } catch (error) {
-    res.status(401).json({ message: "유효한 토큰이 아님" });
+    res.status(401).json({
+      message: "유효한 토큰이 아님",
+      reason: error,
+    });
     return;
   }
 
