@@ -74,10 +74,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/scrap", authenticateJWT, async (req, res) => {
-  // console.log(req.user);
-  // console.log(req.body);
-
+router.patch("/scrap", authenticateJWT, async (req, res) => {
   const {_id: userId} = req.user;
   const {postId} = req.body;
   if (!postId) {
@@ -88,7 +85,7 @@ router.post("/scrap", authenticateJWT, async (req, res) => {
 
   if(!userId) {
     return res.status(404).json({
-      msg: "user 정보를 찾을 수 있습니다."
+      msg: "user 정보를 찾을 수 없습니다."
     })
   }
 
@@ -152,5 +149,101 @@ router.post("/scrap", authenticateJWT, async (req, res) => {
     userId: userId,
   });
 });
+
+router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
+  const {_id: userId} = req.user;
+  const {postId} = req.params;
+
+  if(!postId) {
+    return res.status(400).json({
+      msg: "postId는 필수 입력 값입니다.",
+    })
+  }
+
+  if(!userId) {
+    return res.status(404).json({
+      msg: "user 정보를 찾을 수 없습니다."
+    })
+  }
+  
+  // 스크랩 안한 경우 밴
+  const isNotScrappedPost = await User.find({_id: userId, scrappedPosts: postId});
+  const isNotScrappedUser = await Post.find({_id: postId, scrapingUsers: userId});
+
+  if(isNotScrappedPost.length === 0 || isNotScrappedUser.length === 0) {
+    return res.status(409).json({
+      msg: "스크랩하지 않은 post입니다."
+    });
+  }
+
+  // 트랙잭션 시작을 위한 커넥션
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    await User.updateOne(
+      {_id: userId},
+      {// 삭제하는 연산자
+        $pullAll: {scrappedPosts: [postId]}//삭제하고자 하는 postId 지정
+      },
+      {session}
+    );
+
+    await Post.updateOne(
+      {_id: postId},
+      {
+        $pullAll: {scrapingUsers: [userId]}//삭제하고 싶은 user...gk
+      },
+      {session}
+    );
+
+    await session.commitTransaction();
+  }
+  catch (err) {
+    await session.abortTransaction();
+
+    console.log("scrap remove failed : ", err);
+
+    return res.status(500).json({
+      msg: "스크랩 삭제에 실패하였습니다.",
+      reason: err,
+    })
+  }
+  finally {
+    session.endSession();
+  }
+
+  return res.json({
+    msg: "스크랩 삭제에 성공하였습니다.",
+    postId: postId,
+    userId: userId,
+  });
+});
+
+router.get("/scrap/list", authenticateJWT, async (req, res) => {
+  const {_id: userId} = req.user;
+
+  const scrapList = await User.findOne({
+    _id: userId,
+  })
+  .populate({
+    path: "scrappedPosts",
+    select: "_id userId title updatedAt"
+  });
+  console.log(scrapList.scrappedPosts); 
+
+  if(scrapList.scrappedPosts.length === 0) {
+    res.status(200).json({
+      msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
+      scrappedPosts: []
+    })
+  }
+
+  return res.status(200).json({
+    scrappedPosts: scrapList.scrappedPosts
+  });
+
+})
 
 module.exports = router;
