@@ -74,10 +74,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/scrap", authenticateJWT, async (req, res) => {
-  // console.log(req.user);
-  // console.log(req.body);
-
+router.patch("/scrap", authenticateJWT, async (req, res) => {
   const {_id: userId} = req.user;
   const {postId} = req.body;
   if (!postId) {
@@ -153,9 +150,9 @@ router.post("/scrap", authenticateJWT, async (req, res) => {
   });
 });
 
-router.post("/scrap/remove", authenticateJWT, async (req, res) => {
+router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
   const {_id: userId} = req.user;
-  const {postId} = req.body;
+  const {postId} = req.params;
 
   if(!postId) {
     return res.status(400).json({
