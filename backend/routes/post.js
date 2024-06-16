@@ -2,6 +2,7 @@ var express = require("express");
 var router = express.Router();
 const Post = require("../model/post");
 const User = require("../model/user");
+const Follower = require("../model/follower");
 const { ObjectId } = require("mongodb");
 const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
@@ -263,6 +264,13 @@ router.get("/list", authenticateJWT, async (req, res) => {
     const query = {};
     if (req.query.type) {
       query.type = req.query.type;
+      if (query.type === "follow") {
+        const follow = await Follower.findById(req.user._id);
+        const followList = follow.following_userId;
+        console.log(followList);
+
+        query.userId;
+      }
     }
 
     const result = await Post.find(query)
