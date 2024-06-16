@@ -71,7 +71,7 @@ router.post("/", async (req, res) => {
         httpOnly: true,
         maxAge: 3600000 * 2,
         secure: false,
-        sameSite: "None",
+        samesite: "None",
       });
 
       res.status(201).json({
@@ -100,7 +100,7 @@ router.post("/", async (req, res) => {
       res.cookie("authToken", jwtToken, {
         httpOnly: true,
         maxAge: 3600000 * 2,
-        sameSite: "None",
+        samesite: "None",
       });
 
       res.status(200).json({

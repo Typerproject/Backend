@@ -75,61 +75,68 @@ router.get("/", async (req, res) => {
 });
 
 router.patch("/scrap", authenticateJWT, async (req, res) => {
-  const {_id: userId} = req.user;
-  const {postId} = req.body;
+  const { _id: userId } = req.user;
+  const { postId } = req.body;
   if (!postId) {
     return res.status(400).json({
       msg: "postId는 필수 입력 값입니다.",
-    })
+    });
   }
 
-  if(!userId) {
+  if (!userId) {
     return res.status(404).json({
-      msg: "user 정보를 찾을 수 없습니다."
-    })
+      msg: "user 정보를 찾을 수 없습니다.",
+    });
   }
 
   // 이미 스크랩 된 경우 check
-  const isScrappedPost = await User.find({_id: userId, scrappedPosts: postId});
+  const isScrappedPost = await User.find({
+    _id: userId,
+    scrappedPosts: postId,
+  });
 
-  const isScrappedUser = await Post.find({_id: postId, scrapingUsers: userId});
+  const isScrappedUser = await Post.find({
+    _id: postId,
+    scrapingUsers: userId,
+  });
 
   console.log(isScrappedPost, isScrappedUser);
 
-  if(isScrappedPost.length !==0 || isScrappedUser.length !== 0) {
+  if (isScrappedPost.length !== 0 || isScrappedUser.length !== 0) {
     return res.status(409).json({
-      msg: "이미 스크랩된 post입니다."
-    })
+      msg: "이미 스크랩된 post입니다.",
+    });
   }
 
   const session = await mongoose.startSession();
 
   try {
-    session.startTransaction(); 
+    session.startTransaction();
 
     await User.updateOne(
-      {_id: userId}, 
-      { //userId로 찾기
-      $addToSet: {//배열 필드에 값을 추가할 때 사용하는 연산자
-        scrappedPosts: postId //scrappedPosts에 postId 추가
-        }
-      }, 
-      {session}
-    );//아까 시작한 트랜잭션 세션
+      { _id: userId },
+      {
+        //userId로 찾기
+        $addToSet: {
+          //배열 필드에 값을 추가할 때 사용하는 연산자
+          scrappedPosts: postId, //scrappedPosts에 postId 추가
+        },
+      },
+      { session }
+    ); //아까 시작한 트랜잭션 세션
 
     await Post.updateOne(
-      {_id: postId},
+      { _id: postId },
       {
         $addToSet: {
-          scrapingUsers: userId
-        }
+          scrapingUsers: userId,
+        },
       },
-      {session}
+      { session }
     );
 
-    await session.commitTransaction();// 성공 시 커밋
-  } 
-  catch (err) {
+    await session.commitTransaction(); // 성공 시 커밋
+  } catch (err) {
     await session.abortTransaction();
 
     console.log("scrap failed : ", err);
@@ -137,9 +144,8 @@ router.patch("/scrap", authenticateJWT, async (req, res) => {
     return res.status(500).json({
       msg: "스크랩에 실패하였습니다.",
       reason: err,
-    })
-  } 
-  finally {
+    });
+  } finally {
     session.endSession();
   }
 
@@ -151,28 +157,34 @@ router.patch("/scrap", authenticateJWT, async (req, res) => {
 });
 
 router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
-  const {_id: userId} = req.user;
-  const {postId} = req.params;
+  const { _id: userId } = req.user;
+  const { postId } = req.params;
 
-  if(!postId) {
+  if (!postId) {
     return res.status(400).json({
       msg: "postId는 필수 입력 값입니다.",
-    })
+    });
   }
 
-  if(!userId) {
+  if (!userId) {
     return res.status(404).json({
-      msg: "user 정보를 찾을 수 없습니다."
-    })
+      msg: "user 정보를 찾을 수 없습니다.",
+    });
   }
-  
-  // 스크랩 안한 경우 밴
-  const isNotScrappedPost = await User.find({_id: userId, scrappedPosts: postId});
-  const isNotScrappedUser = await Post.find({_id: postId, scrapingUsers: userId});
 
-  if(isNotScrappedPost.length === 0 || isNotScrappedUser.length === 0) {
+  // 스크랩 안한 경우 밴
+  const isNotScrappedPost = await User.find({
+    _id: userId,
+    scrappedPosts: postId,
+  });
+  const isNotScrappedUser = await Post.find({
+    _id: postId,
+    scrapingUsers: userId,
+  });
+
+  if (isNotScrappedPost.length === 0 || isNotScrappedUser.length === 0) {
     return res.status(409).json({
-      msg: "스크랩하지 않은 post입니다."
+      msg: "스크랩하지 않은 post입니다.",
     });
   }
 
@@ -183,24 +195,24 @@ router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
     session.startTransaction();
 
     await User.updateOne(
-      {_id: userId},
-      {// 삭제하는 연산자
-        $pullAll: {scrappedPosts: [postId]}//삭제하고자 하는 postId 지정
+      { _id: userId },
+      {
+        // 삭제하는 연산자
+        $pullAll: { scrappedPosts: [postId] }, //삭제하고자 하는 postId 지정
       },
-      {session}
+      { session }
     );
 
     await Post.updateOne(
-      {_id: postId},
+      { _id: postId },
       {
-        $pullAll: {scrapingUsers: [userId]}//삭제하고 싶은 user...gk
+        $pullAll: { scrapingUsers: [userId] }, //삭제하고 싶은 user...gk
       },
-      {session}
+      { session }
     );
 
     await session.commitTransaction();
-  }
-  catch (err) {
+  } catch (err) {
     await session.abortTransaction();
 
     console.log("scrap remove failed : ", err);
@@ -208,9 +220,8 @@ router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
     return res.status(500).json({
       msg: "스크랩 삭제에 실패하였습니다.",
       reason: err,
-    })
-  }
-  finally {
+    });
+  } finally {
     session.endSession();
   }
 
@@ -222,28 +233,47 @@ router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
 });
 
 router.get("/scrap/list", authenticateJWT, async (req, res) => {
-  const {_id: userId} = req.user;
+  const { _id: userId } = req.user;
 
   const scrapList = await User.findOne({
     _id: userId,
-  })
-  .populate({
+  }).populate({
     path: "scrappedPosts",
-    select: "_id userId title updatedAt"
+    select: "_id userId title updatedAt",
   });
-  console.log(scrapList.scrappedPosts); 
+  console.log(scrapList.scrappedPosts);
 
-  if(scrapList.scrappedPosts.length === 0) {
+  if (scrapList.scrappedPosts.length === 0) {
     res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
-      scrappedPosts: []
-    })
+      scrappedPosts: [],
+    });
   }
 
   return res.status(200).json({
-    scrappedPosts: scrapList.scrappedPosts
+    scrappedPosts: scrapList.scrappedPosts,
   });
+});
 
-})
+router.get("/list", authenticateJWT, async (req, res) => {
+  try {
+    const perPage = 10;
+    const currentPage = req.query.page || 1;
+
+    const query = {};
+    if (req.query.type) {
+      query.type = req.query.type;
+    }
+
+    const result = await Post.find(query)
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage)
+      .sort({ createdAt: -1 });
+
+    res.json(result);
+  } catch (err) {
+    console.log(err);
+  }
+});
 
 module.exports = router;

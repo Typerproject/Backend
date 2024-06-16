@@ -8,16 +8,20 @@ const blockSchema = new mongoose.Schema({
 
 const postSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "user",
+    },
     title: { type: Object, required: true },
     content: { type: blockSchema, required: true },
     public: { type: Boolean, required: true },
-    
-    scrapingUsers : {
+
+    scrapingUsers: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "user",
       default: [],
-    }
+    },
   },
   {
     timestamps: true,
