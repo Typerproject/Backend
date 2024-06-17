@@ -19,14 +19,26 @@ router.post("/", authenticateJWT, async (req, res) => {
     return;
   }
 
-  console.log(body.content);
-  console.log(typeof body.content);
+  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
+    if (cur.type === "paragraph") {
+      return acc + " " + cur.data.text;
+    }
+    return acc;
+  }, "");
+
+  const prevImg = body.content.blocks.find((item) => {
+    item.type === "img";
+  });
 
   Post.create({
     userId: user._id,
     title: body.title,
     content: body.content,
     public: body.public,
+    preview: {
+      text: prevText,
+      img: prevImg?.data.url,
+    },
   })
     .then((data) => {
       res.status(201).json(data);
