@@ -43,6 +43,7 @@ router.get("/info/:_id", async (req, res, next) => {
           preview: ele.preview,
           createdAt: ele.createdAt,
           public: ele.public,
+          scrapingCount: ele.scrapingUsers.length,
         };
       }),
     });

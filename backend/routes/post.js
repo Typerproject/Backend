@@ -275,22 +275,35 @@ router.get("/list", authenticateJWT, async (req, res) => {
 
     const query = {};
     if (req.query.type) {
-      query.type = req.query.type;
-      if (query.type === "follow") {
-        const follow = await Follower.findById(req.user._id);
-        const followList = follow.following_userId;
-        console.log(followList);
-
-        query.userId;
+      if (req.query.type === "follow") {
+        const follow = await Follower.findOne({ userId: req.user._id });
+        query.userId = { $in: follow.following_userId };
       }
     }
 
     const result = await Post.find(query)
+      .populate("userId")
       .skip((currentPage - 1) * perPage)
       .limit(perPage)
       .sort({ createdAt: -1 });
 
-    res.json(result);
+    res.json(
+      result.map((ele, idx) => {
+        return {
+          title: ele.title,
+          _id: ele._id,
+          preview: ele.preview,
+          createdAt: ele.createdAt,
+          public: ele.public,
+          writer: {
+            id: ele.userId._id,
+            name: ele.userId.nickname,
+            img: ele.userId.profile,
+          },
+          scrapingCount: ele.scrapingUsers.length,
+        };
+      })
+    );
   } catch (err) {
     console.log(err);
   }
