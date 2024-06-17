@@ -13,10 +13,6 @@ const userSchema = new mongoose.Schema(
     comment: { type: String, default: null },
     profile: { type: String, required: true },
     token: kakaoTokenSchema,
-    writedPost: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "post",
-    },
     scrappedPosts: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "post",
@@ -25,8 +21,20 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      virtuals: true,
+    },
+    toObject: {
+      virtuals: true,
+    },
   }
 );
+
+userSchema.virtual("posts", {
+  ref: "post",
+  localField: "_id",
+  foreignField: "userId",
+});
 
 userSchema.statics.enroll = async function (
   userId,
