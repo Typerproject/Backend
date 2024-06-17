@@ -13,18 +13,27 @@ router.get("/corpCode", async (req, res) => {
 
   const corpCode = await CorpCode.find({
     corpName: { $regex: queryName },
-  }).limit(10);
+  })
+    .limit(10)
+    .skip((req.query.page - 1) * 10);
 
-  res.status(200).json(corpCode);
+  const totalPages = await CorpCode.countDocuments({
+    corpName: { $regex: queryName },
+  });
+
+  res
+    .status(200)
+    .json({ result: corpCode, totalPages: Math.ceil(totalPages / 10) });
 });
 
 router.get("/list", async (req, res) => {
   const corpCode = req.query.corpCode;
   const bgn = req.query?.bgn;
   const end = req.query?.end;
+  const page = req.query?.page;
 
   const result = await axios.get(
-    `https://opendart.fss.or.kr/api/list.json?crtfc_key=${process.env.DART_URI}&corp_code=${corpCode}&bgn_de=${bgn}&end_de=${end}`
+    `https://opendart.fss.or.kr/api/list.json?crtfc_key=${process.env.DART_URI}&corp_code=${corpCode}&bgn_de=${bgn}&end_de=${end}&page_no=${page}`
   );
 
   res.json(result.data);
