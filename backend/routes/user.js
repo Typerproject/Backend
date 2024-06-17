@@ -36,7 +36,15 @@ router.get("/info/:_id", async (req, res, next) => {
       nickname: userData.nickname,
       comment: userData.comment,
       profile: userData.profile,
-      writerdPost: userData.posts,
+      writerdPost: userData.posts.map((ele, idx) => {
+        return {
+          title: ele.title,
+          _id: ele._id,
+          preview: ele.preview,
+          createdAt: ele.createdAt,
+          public: ele.public,
+        };
+      }),
     });
   } catch (error) {
     console.error("마이페이지에 유저 정보를 띄우기 위한 api 에러: ", error);
