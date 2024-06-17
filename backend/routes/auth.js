@@ -8,7 +8,11 @@ dotenv.config();
 
 const User = require("../model/user");
 const Follower = require("../model/follower");
-const { getKakaoToken, authenticateJWT } = require("../utils/authenticateJWT");
+const {
+  getKakaoToken,
+  authenticateJWT,
+  kakaoLogout,
+} = require("../utils/authenticateJWT");
 
 const jwtSecret = process.env.JWT_SECRET;
 
@@ -71,7 +75,7 @@ router.post("/", async (req, res) => {
         httpOnly: true,
         maxAge: 3600000 * 2,
         secure: false,
-        samesite: "None",
+        // samesite: "none",
       });
 
       res.status(201).json({
@@ -100,7 +104,7 @@ router.post("/", async (req, res) => {
       res.cookie("authToken", jwtToken, {
         httpOnly: true,
         maxAge: 3600000 * 2,
-        samesite: "None",
+        // sameSite: "none",
       });
 
       res.status(200).json({
@@ -113,14 +117,6 @@ router.post("/", async (req, res) => {
       msg: "카카오 토큰 발급중 에러 발생",
       reason: error,
     });
-  }
-});
-
-router.post("/logout", async (req, res) => {
-  try {
-    res.status(200).send("ㄷㄷㄷㄷ");
-  } catch (error) {
-    console.error("에러 발생 씨바아아알", error);
   }
 });
 

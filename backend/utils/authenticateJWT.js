@@ -9,25 +9,37 @@ const jwtSecret = process.env.JWT_SECRET;
 
 const authenticateJWT = async (req, res, next) => {
   let token = req.cookies.authToken;
+
+  console.log("authenticateJWT - token: ", token);
+
   try {
     const decode = jwt.verify(token, jwtSecret);
 
     // MongoDB에서 사용자 정보 확인
     const user = await User.findById(decode._id);
 
+    console.log("authenticateJWT - user: ", user);
+
     if (user) {
       const tokenInfo = await checkTokenInfo(user.token.accessToken);
 
+      // 20 * 60 * 1000
       if (!tokenInfo || tokenInfo.expires_in < 600) {
         try {
           // 리프레시 토큰으로 새로운 액세스 토큰 발급
           const newTokens = await refreshKakaoToken(user.token.refreshToken);
+
+          console.log("authenticateJWT: ", newTokens);
+
+          console.log("authenticateJWT - if user - 1: ", user);
 
           // 새로운 토큰 정보 업데이트
           user.token.accessToken = newTokens.access_token;
           if (newTokens.refresh_token) {
             user.token.refreshToken = newTokens.refresh_token;
           }
+
+          console.log("authenticateJWT - if user - 2: ", user);
 
           await user.save();
 
@@ -46,8 +58,8 @@ const authenticateJWT = async (req, res, next) => {
           // 쿠키 설정
           res.cookie("authToken", newToken, {
             httpOnly: true,
-            maxAge: newTokens.expires_in * 1000,
-            sameSite: "None",
+            maxAge: 3600000 * 2,
+            // sameSite: "None",
           });
 
           req.user = userData; // 유저 정보를 req 객체에 저장
@@ -203,7 +215,7 @@ const getKakaoToken = async (code) => {
 
     return tokenResponse.data;
   } catch (error) {
-    console.error(error);
+    console.error("authenticateJWT: ", error);
     throw new Error("토큰 가져오기 실패");
   }
 };
@@ -232,7 +244,7 @@ const refreshKakaoToken = async (refreshToken) => {
 
     return response.data; // { access_token, expires_in, refresh_token, refresh_token_expires_in, ... }
   } catch (error) {
-    console.error("카카오 토큰 갱신 오류:", error);
+    console.error("authenticateJWT - 카카오 토큰 갱신 오류:", error);
     throw new Error("토큰 갱신 실패");
   }
 };
@@ -266,9 +278,37 @@ const checkTokenInfo = async (accessToken) => {
   }
 };
 
+const kakaoLogout = async (accessToken) => {
+  try {
+    const userId = await axios.post(
+      "https://kapi.kakao.com/v1/user/logout",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    console.log("authenticateJWT - logout - id: ", userId.data.id);
+
+    if (!userId) {
+      console.log("authenticateJWT - logout - id - X");
+      return;
+    }
+
+    return userId.data.id;
+  } catch (error) {
+    console.log("authenticateJWT - logout: ", error);
+    throw new Error("로그아웃 실패다 ㅜㅜ");
+  }
+};
+
 module.exports = {
   getKakaoToken,
   refreshKakaoToken,
   checkTokenInfo,
   authenticateJWT,
+  kakaoLogout,
 };
