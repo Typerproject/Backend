@@ -24,7 +24,7 @@ router.get("/", authenticateJWT, async (req, res, next) => {
 router.get("/info/:_id", async (req, res, next) => {
   try {
     const userId = req.params._id;
-    const userData = await User.findById(userId);
+    const userData = await User.findById(userId).populate("posts");
 
     if (!userData) {
       res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
@@ -36,6 +36,16 @@ router.get("/info/:_id", async (req, res, next) => {
       nickname: userData.nickname,
       comment: userData.comment,
       profile: userData.profile,
+      writerdPost: userData.posts.map((ele, idx) => {
+        return {
+          title: ele.title,
+          _id: ele._id,
+          preview: ele.preview,
+          createdAt: ele.createdAt,
+          public: ele.public,
+          scrapingCount: ele.scrapingUsers.length,
+        };
+      }),
     });
   } catch (error) {
     console.error("마이페이지에 유저 정보를 띄우기 위한 api 에러: ", error);
