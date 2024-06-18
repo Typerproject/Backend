@@ -8,6 +8,86 @@ const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
 const { makeUserInfo } = require("../utils/makeUserInfo");
 
+router.get("/list", makeUserInfo, async (req, res) => {
+  try {
+    const perPage = 10;
+    const currentPage = req.query.page || 1;
+
+    const query = {};
+    const sort = { createdAt: -1 };
+
+    if (req.userId) {
+      if (req.query.type) {
+        if (req.query.type === "follow") {
+          const follow = await Follower.findOne({ userId: req.userId });
+          query.userId = { $in: follow.following_userId };
+        }
+      }
+    }
+
+    let result;
+
+    if (req.query.type === "hot") {
+      result = await Post.aggregate([
+        {
+          $addFields: {
+            scrapingUsersCount: { $size: "$scrapingUsers" },
+          },
+        },
+        {
+          $match: {
+            scrapingUsersCount: { $gt: 0 },
+          },
+        },
+        {
+          $sort: {
+            scrapingUsersCount: -1,
+          },
+        },
+        {
+          $limit: perPage,
+        },
+        {
+          $skip: (currentPage - 1) * perPage,
+        },
+      ]);
+    } else {
+      result = await Post.find(query)
+        .populate("userId")
+        .skip((currentPage - 1) * perPage)
+        .limit(perPage)
+        .sort(sort);
+    }
+
+    res.json(
+      result.map((ele, idx) => {
+        return {
+          title: ele.title,
+          _id: ele._id,
+          preview: ele.preview,
+          createdAt: ele.createdAt,
+          public: ele.public,
+          writer: {
+            id: ele.userId._id,
+            name: ele.userId.nickname,
+            img: ele.userId.profile,
+          },
+          scrapingCount: ele.scrapingUsers.length,
+          isScrapped: req.userId
+            ? ele.scrapingUsers.includes(new ObjectId(req.userId))
+            : false,
+        };
+      })
+    );
+  } catch (err) {
+    console.log(err);
+    res.json({
+      msg: "post/list 에러 발생",
+      reason: err,
+    });
+  }
+});
+
 router.post("/", authenticateJWT, async (req, res) => {
   const body = req.body;
 
@@ -50,9 +130,9 @@ router.post("/", authenticateJWT, async (req, res) => {
     });
 });
 
-router.get("/:postId", makeUserInfo, async (req, res) => {
+router.get("/:post", makeUserInfo, async (req, res) => {
   try {
-    const post = await Post.findById(new ObjectId(req.params.postId));
+    const post = await Post.findById(new ObjectId(req.query.postId));
 
     if (!post) {
       res.status(404).json({
@@ -262,14 +342,16 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
 
   const scrapList = await User.findOne({
     _id: userId,
-  }).populate({
-    path: "scrappedPosts",
-    select: "_id userId title updatedAt preview",
-    populate: {
-      path: "userId",
-      select: "_id nickname profile"
-    }
-  }).lean();
+  })
+    .populate({
+      path: "scrappedPosts",
+      select: "_id userId title updatedAt preview",
+      populate: {
+        path: "userId",
+        select: "_id nickname profile",
+      },
+    })
+    .lean();
   console.log(scrapList.scrappedPosts);
 
   if (scrapList.scrappedPosts.length === 0) {
@@ -281,7 +363,7 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
 
   //userId -> writer로 변경
   if (scrapList.scrappedPosts) {
-    scrapList.scrappedPosts = scrapList.scrappedPosts.map(post => {
+    scrapList.scrappedPosts = scrapList.scrappedPosts.map((post) => {
       post.writer = post.userId;
       delete post.userId;
       return post;
@@ -291,52 +373,6 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   return res.status(200).json({
     scrappedPosts: scrapList.scrappedPosts,
   });
-});
-
-router.get("/list", authenticateJWT, async (req, res) => {
-  try {
-    const userId = req.header?.id;
-
-    const perPage = 10;
-    const currentPage = req.query.page || 1;
-
-    const query = {};
-    if (req.query.type) {
-      if (req.query.type === "follow") {
-        const follow = await Follower.findOne({ userId: req.user._id });
-        query.userId = { $in: follow.following_userId };
-      }
-    }
-    if (req.query.type === "Hot") {
-    }
-
-    const result = await Post.find(query)
-      .populate("userId")
-      .skip((currentPage - 1) * perPage)
-      .limit(perPage)
-      .sort({ createdAt: -1 });
-
-    res.json(
-      result.map((ele, idx) => {
-        return {
-          title: ele.title,
-          _id: ele._id,
-          preview: ele.preview,
-          createdAt: ele.createdAt,
-          public: ele.public,
-          writer: {
-            id: ele.userId._id,
-            name: ele.userId.nickname,
-            img: ele.userId.profile,
-          },
-          scrapingCount: ele.scrapingUsers.length,
-          isScrapped: ele.scrapingUsers.includes(new ObjectId(userId)),
-        };
-      })
-    );
-  } catch (err) {
-    console.log(err);
-  }
 });
 
 module.exports = router;
