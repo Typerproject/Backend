@@ -6,6 +6,7 @@ const Follower = require("../model/follower");
 const { ObjectId } = require("mongodb");
 const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
+const { makeUserInfo } = require("../utils/makeUserInfo");
 
 router.post("/", authenticateJWT, async (req, res) => {
   const body = req.body;
@@ -49,9 +50,9 @@ router.post("/", authenticateJWT, async (req, res) => {
     });
 });
 
-router.get("/", async (req, res) => {
+router.get("/:postId", makeUserInfo, async (req, res) => {
   try {
-    const post = await Post.findById(new ObjectId(req.query.postId));
+    const post = await Post.findById(new ObjectId(req.params.postId));
 
     if (!post) {
       res.status(404).json({
@@ -60,9 +61,13 @@ router.get("/", async (req, res) => {
       return;
     }
 
-    console.log(post);
     const writer = await User.findById(post.userId);
-    console.log(writer);
+    let isScrapped;
+    if (req.userId) {
+      isScrapped = post.scrapingUsers.includes(new ObjectId(req.userId));
+    } else {
+      isScrapped = false;
+    }
 
     res.json({
       id: post._id,
@@ -77,6 +82,7 @@ router.get("/", async (req, res) => {
         name: writer.nickname,
         img: writer.profile,
       },
+      isScrapped: isScrapped,
     });
   } catch (err) {
     console.log(err);
@@ -270,6 +276,8 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
 
 router.get("/list", authenticateJWT, async (req, res) => {
   try {
+    const userId = req.header?.id;
+
     const perPage = 10;
     const currentPage = req.query.page || 1;
 
@@ -279,6 +287,8 @@ router.get("/list", authenticateJWT, async (req, res) => {
         const follow = await Follower.findOne({ userId: req.user._id });
         query.userId = { $in: follow.following_userId };
       }
+    }
+    if (req.query.type === "Hot") {
     }
 
     const result = await Post.find(query)
@@ -301,6 +311,7 @@ router.get("/list", authenticateJWT, async (req, res) => {
             img: ele.userId.profile,
           },
           scrapingCount: ele.scrapingUsers.length,
+          isScrapped: ele.scrapingUsers.includes(new ObjectId(userId)),
         };
       })
     );
