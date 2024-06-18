@@ -253,7 +253,7 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
       msg: "user 정보를 찾을 수 없습니다.",
     });
   }
-  
+
   const scrapList = await User.findOne({
     _id: userId,
   }).populate({
@@ -267,7 +267,7 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   console.log(scrapList.scrappedPosts);
 
   if (scrapList.scrappedPosts.length === 0) {
-    res.status(200).json({
+    return res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
       scrappedPosts: [],
     });
@@ -278,7 +278,6 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
     scrapList.scrappedPosts = scrapList.scrappedPosts.map(post => {
       post.writer = post.userId;
       delete post.userId;
-      return post;
     });
   }
 
