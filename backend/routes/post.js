@@ -248,18 +248,37 @@ router.delete("/scrap/:postId", authenticateJWT, async (req, res) => {
 router.get("/scrap/list", authenticateJWT, async (req, res) => {
   const { _id: userId } = req.user;
 
+  if (!userId) {
+    return res.status(404).json({
+      msg: "user 정보를 찾을 수 없습니다.",
+    });
+  }
+
   const scrapList = await User.findOne({
     _id: userId,
   }).populate({
     path: "scrappedPosts",
-    select: "_id userId title updatedAt",
-  });
+    select: "_id userId title updatedAt preview",
+    populate: {
+      path: "userId",
+      select: "_id nickname profile"
+    }
+  }).lean();
   console.log(scrapList.scrappedPosts);
 
   if (scrapList.scrappedPosts.length === 0) {
-    res.status(200).json({
+    return res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
       scrappedPosts: [],
+    });
+  }
+
+  //userId -> writer로 변경
+  if (scrapList.scrappedPosts) {
+    scrapList.scrappedPosts = scrapList.scrappedPosts.map(post => {
+      post.writer = post.userId;
+      delete post.userId;
+      return post;
     });
   }
 
