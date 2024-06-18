@@ -130,9 +130,9 @@ router.post("/", authenticateJWT, async (req, res) => {
     });
 });
 
-router.get("/:post", makeUserInfo, async (req, res) => {
+router.get("/:postId", makeUserInfo, async (req, res) => {
   try {
-    const post = await Post.findById(new ObjectId(req.query.postId));
+    const post = await Post.findById(new ObjectId(req.params.postId));
 
     if (!post) {
       res.status(404).json({
