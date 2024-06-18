@@ -6,6 +6,7 @@ var logger = require("morgan");
 
 const apiRouter = require("./routes/api");
 const authRouter = require("./routes/auth");
+const searchRouter = require("./routes/search");
 
 const userRouter = require("./routes/user");
 
@@ -30,7 +31,7 @@ app.use(cors({ origin: ["http://localhost:5173","http://typer.kro.kr/"], credent
 app.use("/api", apiRouter);
 app.use("/auth", authRouter);
 
-
+app.use("/search",searchRouter);
 app.use("/user", userRouter);
 app.use("/post", postRouter);
 
