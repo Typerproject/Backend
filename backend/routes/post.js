@@ -278,6 +278,7 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
     scrapList.scrappedPosts = scrapList.scrappedPosts.map(post => {
       post.writer = post.userId;
       delete post.userId;
+      return post;
     });
   }
 
