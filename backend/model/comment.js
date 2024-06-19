@@ -21,6 +21,11 @@ const commentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    replies: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: "reply",
+        default: [],
+    }
   },
   {
     timestamps: true,
