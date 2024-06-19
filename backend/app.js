@@ -11,6 +11,7 @@ const searchRouter = require("./routes/search");
 const userRouter = require("./routes/user");
 
 const postRouter = require("./routes/post");
+const commentRouter = require("./routes/comment");
 const shinhanRouter=require('./routes/shinhanapi');
 
 const cors = require("cors");
@@ -34,7 +35,7 @@ app.use("/auth", authRouter);
 app.use("/search",searchRouter);
 app.use("/user", userRouter);
 app.use("/post", postRouter);
-
+app.use("/comment", commentRouter);
 
 app.use("/shinhan",shinhanRouter);
 
