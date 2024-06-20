@@ -24,7 +24,13 @@ router.get("/", authenticateJWT, async (req, res, next) => {
 router.get("/info/:_id", async (req, res, next) => {
   try {
     const userId = req.params._id;
-    const userData = await User.findById(userId).populate("posts");
+
+    const options = { sort: { createdAt: -1 } };
+
+    const userData = await User.findById(userId).populate({
+      path: "posts",
+      options: options,
+    });
 
     if (!userData) {
       res.status(404).json({ errorMessage: "유저 조회 ㄴㄴ" });
