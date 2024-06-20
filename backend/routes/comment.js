@@ -71,24 +71,48 @@ router.post("/reply", authenticateJWT, async (req, res) => {
     });
   }
 
+  let response;
+
+  const session = await mongoose.startSession();
+
   try {
-    const response = await Reply.create({
+    session.startTransaction();
+
+    response = await Reply.create({
       postId: postId,
       writerId: userId,
       text: text,
       parentCommentId: parentCommentId,
     });
 
-    res.status(201).json({
-      response,
-    });
+    await Comment.updateOne(
+      { _id: parentCommentId },
+      {
+        $addToSet: {
+          replies: response._id,
+        },
+      }
+    );
+
+    await session.commitTransaction();//성공 시 커밋 완료 ~
+
   } catch (error) {
     console.log(error);
+
+    await session.abortTransaction();
+
     return res.status(500).json({
       msg: "comment/reply post 오류 발생",
       reason: error,
     });
+  } finally {
+    session.endSession();
   }
+
+  return res.status(201).json({
+    response,
+    msg: "대댓글 달기 성공",
+  });
 });
 
 // 댓글 삭제
@@ -113,8 +137,12 @@ router.delete("/:commentId", authenticateJWT, async (req, res) => {
     });
   }
 
+  const session = await mongoose.startSession();
+
   //확인
   try {
+    session.startTransaction();
+
     let response;
     if (comment) {
       //대댓글이 없는 코멘트 -> 삭제
@@ -134,22 +162,47 @@ router.delete("/:commentId", authenticateJWT, async (req, res) => {
         );
       }
     } else if (reply) {
-      response = await Reply.deleteOne({
+      //부모 코멘트 배열에서 먼저 삭제
+
+      const {parentCommentId} = await Reply.findOne(
+        {_id : commentId},
+        {parentCommentId: 1} //부모 코멘트 아이디 알아내기 
+      );
+
+      console.log("commentId", parentCommentId);
+
+      await Comment.updateOne(
+        { _id: parentCommentId},
+        {
+            $pullAll: {replies: [commentId]} // reply의 _id 배열에서 삭제
+        },
+        {session}
+      )
+
+      await Reply.deleteOne({ //대댓글 지우기
         _id: commentId,
       });
     }
 
-    return res.status(202).json({
-      msg: "comment 삭제 성공",
-      // response
-    });
+    await session.commitTransaction(); // 성공 시 커밋
   } catch (error) {
+    await session.abortTransaction();
+
     console.log(error);
+
     return res.status(500).json({
       msg: "comment delete 에러",
       reason: error,
     });
+  } finally {
+    session.endSession();
   }
+
+  return res.status(200).json({
+    msg: "comment 삭제 성공",
+    // response
+  });
+
 });
 
 module.exports = router;
