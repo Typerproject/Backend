@@ -18,7 +18,8 @@ router.get("/", async function (req, res) {
       return res.status(403).json({ error: "Company not found" });
     }
 
-    const new_code = new_code_list[0].corp_code[0]; // 배열의 첫 번째 요소에서 corp_code를 추출합니다.
+    const new_code = new_code_list[0].corp_code[0]; 
+    // 배열의 첫 번째 요소에서 corp_code를 추출합니다.
     const final = [];
 
     for (let i = startdate; i <= enddate; i++) {
@@ -33,10 +34,14 @@ router.get("/", async function (req, res) {
             fs_div: "OFS",
           },
         }
+        
       );
+
+      console.log(dart)
 
       const response = dart.data;
       const list = response.list;
+    
 
       const targetAccountNames = [
         "수익(매출액)",

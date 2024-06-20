@@ -120,4 +120,22 @@ router.post("/", async (req, res) => {
   }
 });
 
+// 쿠키 체크
+router.get("/cookie", async (req, res) => {
+  let cookie = req.cookies.authToken;
+
+  console.log("auth.js - cookie: ", cookie);
+
+  try {
+    if (!cookie) {
+      res.status(200).send(false);
+    } else {
+      res.status(200).send(true);
+    }
+  } catch (error) {
+    console.error("get cookie error", error);
+    next(error);
+  }
+});
+
 module.exports = router;
