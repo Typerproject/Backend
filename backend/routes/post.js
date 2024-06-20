@@ -35,6 +35,14 @@ router.get("/list", makeUserInfo, async (req, res) => {
           },
         },
         {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userId",
+          },
+        },
+        {
           $match: {
             scrapingUsersCount: { $gt: 0 },
           },
@@ -51,6 +59,11 @@ router.get("/list", makeUserInfo, async (req, res) => {
           $skip: (currentPage - 1) * perPage,
         },
       ]);
+
+      result = result.map((ele) => {
+        ele.userId = ele.userId[0];
+        return ele;
+      });
     } else {
       result = await Post.find(query)
         .populate("userId")
@@ -74,14 +87,14 @@ router.get("/list", makeUserInfo, async (req, res) => {
           },
           scrapingCount: ele.scrapingUsers.length,
           isScrapped: req.userId
-            ? ele.scrapingUsers.includes(new ObjectId(req.userId))
+            ? ele.scrapingUsers.some((userId) => userId.equals(req.userId))
             : false,
         };
       })
     );
   } catch (err) {
     console.log(err);
-    res.json({
+    res.status(500).json({
       msg: "post/list 에러 발생",
       reason: err,
     });
