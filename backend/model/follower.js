@@ -20,7 +20,16 @@ const followerSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: {
+      currentTime: () => {
+        let date = new Date();
+        let newDate = new Date(
+          date.getTime() + date.getTimezoneOffset() * 60 * 1000 * -1
+        );
+        console.log(newDate);
+        return newDate;
+      },
+    },
   }
 );
 
