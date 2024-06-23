@@ -22,13 +22,22 @@ const commentSchema = new mongoose.Schema(
       default: false,
     },
     replies: {
-        type: [mongoose.Schema.Types.ObjectId],
-        ref: "reply",
-        default: [],
-    }
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "reply",
+      default: [],
+    },
   },
   {
-    timestamps: true,
+    timestamps: {
+      currentTime: () => {
+        let date = new Date();
+        let newDate = new Date(
+          date.getTime() + date.getTimezoneOffset() * 60 * 1000 * -1
+        );
+        console.log(newDate);
+        return newDate;
+      },
+    },
     versionKey: false,
   }
 );
