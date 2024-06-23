@@ -89,6 +89,12 @@ router.get("/report/:code", async (req, res) => {
     if (ele.name === "span" && type === "HTML") {
       doc(ele).addClass("target");
     }
+
+    if (ele.name === "img") {
+      doc(ele).addClass("target");
+      doc(ele).attr("src", "https://dart.fss.or.kr" + doc(ele).attr("src"));
+      console.log(doc(ele).attr);
+    }
   });
 
   doc("head").append("<style>.target:hover{background-color: yellow}</style>");
