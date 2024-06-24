@@ -44,6 +44,7 @@ router.get("/info/:_id", async (req, res, next) => {
       nickname: userData.nickname,
       comment: userData.comment,
       profile: userData.profile,
+      scrappedPost: userData.scrappedPosts.map((id) => id.toHexString()),
       writerdPost: userData.posts.map((ele, idx) => {
         return {
           title: ele.title,
