@@ -353,9 +353,23 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
     });
   }
 
-  const scrapList = await User.findOne({
-    _id: userId,
-  })
+  // perPage -> 10
+  // page query를 받아서 (디폴트는 1) 페이지네이션
+  // 최근에 스크랩 한 순서대로 응답을 주고 싶으므로 한번 뒤집기 필요
+
+  const perPage = 10;
+  const currentPage = req.query.page || 1;
+
+  // { <arrayField>: { $slice: [ <number>, <number> ] } }
+
+  const scrapList = await User.findOne(
+    {
+      _id: userId,
+    },
+    { // 배열 형태인 필드 읽는 범위 조절
+      scrappedPosts: { $slice: [(currentPage - 1) * perPage, perPage] },
+    }
+  )
     .populate({
       path: "scrappedPosts",
       select: "_id userId title updatedAt preview",
@@ -365,7 +379,8 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
       },
     })
     .lean();
-  console.log(scrapList.scrappedPosts);
+    console.log('[', (currentPage - 1) * perPage, perPage, ']');
+  console.log(scrapList.scrappedPosts.length);
 
   if (scrapList.scrappedPosts.length === 0) {
     return res.status(200).json({
