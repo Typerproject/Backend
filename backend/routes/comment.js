@@ -6,6 +6,12 @@ const mongoose = require("mongoose");
 const Post = require("../model/post");
 const { ObjectId } = require("mongodb");
 
+router.get("/:postId", async (req, res) => {
+  res.json(
+    await Comment.find({ postId: req.params.postId }).populate("replies")
+  );
+});
+
 // 댓글 쓰기
 router.post("/", authenticateJWT, async (req, res) => {
   //writerId <- req.user

@@ -52,7 +52,7 @@ router.get("/info/:_id", async (req, res, next) => {
           createdAt: ele.createdAt,
           public: ele.public,
           scrapingCount: ele.scrapingUsers.length,
-          commentsCount: ele.commentsCount,
+          commentCount: ele.commentCount,
         };
       }),
     });
