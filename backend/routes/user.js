@@ -5,6 +5,9 @@ const User = require("../model/user");
 const Follower = require("../model/follower");
 
 const { authenticateJWT, kakaoLogout } = require("../utils/authenticateJWT");
+const Post = require("../model/post");
+const comment = require("../model/comment");
+const { makeUserInfo } = require("../utils/makeUserInfo");
 
 // 인증 테스트 api
 router.get("/", authenticateJWT, async (req, res, next) => {
@@ -21,9 +24,10 @@ router.get("/", authenticateJWT, async (req, res, next) => {
 });
 
 // 마이페이지에 유저 정보를 띄우기 위한 api
-router.get("/info/:_id", async (req, res, next) => {
+router.get("/info/:_id", makeUserInfo, async (req, res, next) => {
   try {
     const userId = req.params._id;
+    const cookieId = req.userId ? req.userId : "";
 
     const options = { sort: { createdAt: -1 } };
 
@@ -50,6 +54,10 @@ router.get("/info/:_id", async (req, res, next) => {
           createdAt: ele.createdAt,
           public: ele.public,
           scrapingCount: ele.scrapingUsers.length,
+          isScrapped: ele.scrapingUsers.some((id) => {
+            return id.equals(cookieId);
+          }),
+          commentCount: ele.commentCount,
         };
       }),
     });

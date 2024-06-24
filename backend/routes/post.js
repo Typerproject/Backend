@@ -85,6 +85,7 @@ router.get("/list", makeUserInfo, async (req, res) => {
             name: ele.userId.nickname,
             img: ele.userId.profile,
           },
+          commentCount: ele.commentCount,
           scrapingCount: ele.scrapingUsers.length,
           isScrapped: req.userId
             ? ele.scrapingUsers.some((userId) => userId.equals(req.userId))
