@@ -177,6 +177,7 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
         img: writer.profile,
       },
       isScrapped: isScrapped,
+      scrapingCount: post.scrapingUsers.length,
     });
   } catch (err) {
     console.log(err);
