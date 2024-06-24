@@ -6,6 +6,12 @@ const mongoose = require("mongoose");
 const Post = require("../model/post");
 const { ObjectId } = require("mongodb");
 
+router.get("/:postId", async (req, res) => {
+  res.json(
+    await Comment.find({ postId: req.params.postId }).populate("replies")
+  );
+});
+
 // 댓글 쓰기
 router.post("/", authenticateJWT, async (req, res) => {
   //writerId <- req.user
@@ -27,7 +33,11 @@ router.post("/", authenticateJWT, async (req, res) => {
     });
   }
 
+  const session = await mongoose.startSession();
+
   try {
+    session.startTransaction();
+
     // comment create 하는 코드
     const response = await Comment.create({
       postId: postId,
@@ -35,10 +45,14 @@ router.post("/", authenticateJWT, async (req, res) => {
       text: text,
     });
 
+    post.commentCount += 1;
+    post.save();
+    await session.commitTransaction(); //성공 시 커밋 완료 ~
     return res.status(201).json({
       response,
     });
   } catch (error) {
+    session.abortTransaction();
     console.log(error);
     return res.status(500).json({
       msg: "comment post 에러 발생",
@@ -94,8 +108,10 @@ router.post("/reply", authenticateJWT, async (req, res) => {
       }
     );
 
-    await session.commitTransaction();//성공 시 커밋 완료 ~
+    post.commentCount += 1;
+    post.save();
 
+    await session.commitTransaction(); //성공 시 커밋 완료 ~
   } catch (error) {
     console.log(error);
 
@@ -137,6 +153,8 @@ router.delete("/:commentId", authenticateJWT, async (req, res) => {
     });
   }
 
+  const post = await Post.findById(comment ? comment.postId : reply.postId);
+
   const session = await mongoose.startSession();
 
   //확인
@@ -149,6 +167,8 @@ router.delete("/:commentId", authenticateJWT, async (req, res) => {
       //대댓글이 있는 코멘트 -> isDeleted true로 변경
       replies = await Reply.find({ parentCommentId: commentId });
 
+      post.commentCount -= 1;
+
       if (replies.length === 0) {
         response = await Comment.deleteOne({ _id: commentId });
       } else {
@@ -160,29 +180,35 @@ router.delete("/:commentId", authenticateJWT, async (req, res) => {
             isDeleted: true,
           }
         );
+        post.commentCount -= replies.length;
       }
     } else if (reply) {
       //부모 코멘트 배열에서 먼저 삭제
 
-      const {parentCommentId} = await Reply.findOne(
-        {_id : commentId},
-        {parentCommentId: 1} //부모 코멘트 아이디 알아내기 
+      const { parentCommentId } = await Reply.findOne(
+        { _id: commentId },
+        { parentCommentId: 1 } //부모 코멘트 아이디 알아내기
       );
 
       console.log("commentId", parentCommentId);
 
       await Comment.updateOne(
-        { _id: parentCommentId},
+        { _id: parentCommentId },
         {
-            $pullAll: {replies: [commentId]} // reply의 _id 배열에서 삭제
+          $pullAll: { replies: [commentId] }, // reply의 _id 배열에서 삭제
         },
-        {session}
-      )
+        { session }
+      );
 
-      await Reply.deleteOne({ //대댓글 지우기
+      await Reply.deleteOne({
+        //대댓글 지우기
         _id: commentId,
       });
+
+      post.commentCount -= 1;
     }
+
+    post.save();
 
     await session.commitTransaction(); // 성공 시 커밋
   } catch (error) {
@@ -202,7 +228,6 @@ router.delete("/:commentId", authenticateJWT, async (req, res) => {
     msg: "comment 삭제 성공",
     // response
   });
-
 });
 
 module.exports = router;
