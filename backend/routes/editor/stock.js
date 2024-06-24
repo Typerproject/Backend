@@ -3,6 +3,10 @@ const router = express.Router();
 const axios = require("axios");
 const dotenv = require("dotenv");
 const { getAccessToken } = require("../../utils/stockAuth");
+const fs = require("fs");
+const path = require("path");
+const csvParse = require("csv-parser");
+const iconv = require("iconv-lite");
 
 dotenv.config();
 
@@ -38,6 +42,19 @@ router.get("/", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send("Error fetching data");
+  }
+});
+
+router.get("/code", async (req, res) => {
+  try {
+    const codeList = await getCodeList();
+
+    res.status(200).json({
+      codeList: codeList,
+    });
+  } catch (error) {
+    console.error("종목 코드 리스트 에러", error);
+    res.status(500).send("종목 코드 리스트 에러");
   }
 });
 
@@ -89,6 +106,37 @@ async function getStock({
   } catch (error) {
     console.error(error);
   }
+}
+
+async function getCodeList() {
+  const csvFilePath = path.join(
+    __dirname,
+    "../../public/csv/data_20240623.csv"
+  );
+
+  return new Promise((resolve, reject) => {
+    const records = [];
+
+    // CSV 파일을 스트림으로 읽기
+    fs.createReadStream(csvFilePath)
+      .pipe(iconv.decodeStream("euc-kr"))
+      .pipe(csvParse()) // CSV 파서 설정
+      .on("data", (data) => {
+        records.push(data);
+      })
+      .on("end", () => {
+        // 모든 데이터를 처리한 후 선택적으로 필드 추출
+        const selectedData = records.map((record) => ({
+          code: record["종목코드"],
+          name: record["종목명"],
+        }));
+        resolve(selectedData); // 선택된 데이터를 반환하기 위해 Promise를 해결(resolve)
+      })
+      .on("error", (error) => {
+        console.error("에러 발생:", error);
+        reject(error); // 오류가 발생할 경우 Promise를 거부(reject)
+      });
+  });
 }
 
 module.exports = router;
