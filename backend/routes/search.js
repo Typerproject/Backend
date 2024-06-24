@@ -8,12 +8,31 @@ const User = require("../model/user");
 router.get("/",async (req,res)=>{
 
     const search=req.query.value;
+    const page=Number(req.query.page);
     
-    const result = await Post.find({ title: { $regex: search, $options: 'i' } }); 
+
+    const limit=5
+
+    const start=(page-1)*limit
+
+
+    const result = await Post.find({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { 'preview.text': { $regex: search, $options: 'i' } }
+        ]
+      }).skip(start).limit(5)
+    
+      const total=await Post.countDocuments({$or: [
+        { title: { $regex: search, $options: 'i' } },
+        { 'preview.text': { $regex: search, $options: 'i' } }
+      ]})
+
+    
 
     
                     
-    const new_array = await Promise.all(result.map(async (elem, idx) => {
+        const new_array = await Promise.all(result.map(async (elem, idx) => {
         const response = await User.findOne({ _id: elem.userId }); 
 
         const nick = response ? response.nickname : 'Unknown';
@@ -29,8 +48,39 @@ router.get("/",async (req,res)=>{
         };
     }));
 
-    res.json(new_array)
+    res.json({new_array,total})
 
+})
+
+
+router.get("/writer",async (req,res)=>{
+
+    const nick=req.query.value;
+    const page=Number(req.query.page);
+
+    const limit=5
+
+    const start=(page-1)*limit
+
+    const findnickname= await User.find({nickname:{ $regex: nick, $options: 'i' } }).skip(start).limit(5)
+
+    const total=await User.find({nickname:{ $regex: nick, $options: 'i' } })
+    
+    
+
+
+    const new_array = await Promise.all(findnickname.map(async (elem, idx) => {
+    
+        return {
+            userId:elem._id,
+            profile:elem.profile,
+            nickname:elem.nickname,
+            comment:elem.comment
+           
+        };
+    }));
+    
+    res.json({new_array,total})
 })
 
 
