@@ -5,6 +5,8 @@ const User = require("../model/user");
 const Follower = require("../model/follower");
 
 const { authenticateJWT, kakaoLogout } = require("../utils/authenticateJWT");
+const Post = require("../model/post");
+const comment = require("../model/comment");
 
 // 인증 테스트 api
 router.get("/", authenticateJWT, async (req, res, next) => {
@@ -50,6 +52,7 @@ router.get("/info/:_id", async (req, res, next) => {
           createdAt: ele.createdAt,
           public: ele.public,
           scrapingCount: ele.scrapingUsers.length,
+          commentsCount: ele.commentsCount,
         };
       }),
     });

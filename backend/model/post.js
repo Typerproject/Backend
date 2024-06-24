@@ -25,7 +25,7 @@ const postSchema = new mongoose.Schema(
     title: { type: Object, required: true },
     content: { type: blockSchema, required: true },
     public: { type: Boolean, required: true },
-
+    commentCount: { type: Number, default: 0 },
     scrapingUsers: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "user",
@@ -40,7 +40,6 @@ const postSchema = new mongoose.Schema(
         let newDate = new Date(
           date.getTime() + date.getTimezoneOffset() * 60 * 1000 * -1
         );
-        console.log(newDate);
         return newDate;
       },
     },
@@ -53,5 +52,4 @@ const postSchema = new mongoose.Schema(
     },
   }
 );
-
 module.exports = mongoose.model("post", postSchema);
