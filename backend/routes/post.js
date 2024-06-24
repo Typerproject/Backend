@@ -373,16 +373,15 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   )
     .populate({
       path: "scrappedPosts",
-      select: "_id userId title updatedAt preview",
+      select: "_id userId title updatedAt preview scrapingUsers commentCount", //commentCount일단 추가
       populate: {
         path: "userId",
         select: "_id nickname profile",
       },
     })
     .lean();
-    console.log('[', (currentPage - 1) * perPage, perPage, ']');
-  console.log(scrapList.scrappedPosts.length);
 
+  
   if (scrapList.scrappedPosts.length === 0) {
     return res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
@@ -394,13 +393,18 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   if (scrapList.scrappedPosts) {
     scrapList.scrappedPosts = scrapList.scrappedPosts.map((post) => {
       post.writer = post.userId;
+      post.scrapingCount = post.scrapingUsers.length
       delete post.userId;
+      delete post.scrapingUsers;
       return post;
     });
   }
 
+  const scrapListReverse = scrapList.scrappedPosts.reverse();
+
   return res.status(200).json({
-    scrappedPosts: scrapList.scrappedPosts,
+    // scrappedPosts: scrapList.scrappedPosts,
+    scrappedPosts: scrapListReverse,
   });
 });
 
