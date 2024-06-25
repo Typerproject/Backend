@@ -436,25 +436,64 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
     return res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
       scrappedPosts: [],
+router.patch("/:postId", authenticateJWT, async (req, res) => {
+  const { _id: userId } = req.user;
+  const { postId } = req.params;
+  // const { content } = req.body;
+  const body = req.body;
+
+  if (!postId) {
+    return res.status(400).json({
+      msg: "postId는 필수 입력 값입니다.",
     });
   }
 
-  //userId -> writer로 변경
-  if (scrapList.scrappedPosts) {
-    scrapList.scrappedPosts = scrapList.scrappedPosts.map((post) => {
-      post.writer = post.userId;
-      post.scrapingCount = post.scrapingUsers.length;
-      delete post.userId;
-      delete post.scrapingUsers;
-      return post;
+  // writer랑 user id가 같은지도 화긴
+  const { userId: writerId } = await Post.findById(postId);
+  // console.log(writerId);
+  if (writerId !== userId) {
+    return res.status(403).json({
+      msg: "post의 writer만 내용을 수정할 수 있습니다.",
     });
   }
 
-  const scrapListReverse = scrapList.scrappedPosts.reverse();
+  // block이 blockSchema 형식에 맞는지 check.. 해야 할까?
+
+  // preview update 해야 함
+  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
+    if (cur.type === "paragraph") {
+      return acc + " " + cur.data.text;
+    }
+    return acc;
+  }, "");
+
+  const prevImg = body.content.blocks.find((item) => {
+    item.type === "img";
+  });
+
+  // content, preview update
+  let result;
+  try {
+    result = await Post.updateOne(
+      { _id: postId },
+      {
+        content: body.content,
+        preview: {
+          text: prevText,
+          img: prevImg?.data.url,
+        }
+      }
+    );
+  } catch (error) {
+    return res.status(500).json({
+      msg: "post update error",
+      reason: error,
+    });
+  }
 
   return res.status(200).json({
-    // scrappedPosts: scrapList.scrappedPosts,
-    scrappedPosts: scrapListReverse,
+    //수정 완료 시
+    result,
   });
 });
 
