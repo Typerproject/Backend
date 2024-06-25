@@ -413,29 +413,105 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
 
   // { <arrayField>: { $slice: [ <number>, <number> ] } }
 
-  const scrapList = await User.findOne(
+  // 옛날 코드
+  // const scrapList = await User.findOne(
+  //   {
+  //     _id: userId,
+  //   },
+  //   {
+  //     // 배열 형태인 필드 읽는 범위 조절
+  //     scrappedPosts: { $slice: [(currentPage - 1) * perPage, perPage] },
+  //   }
+  // )
+  //   .populate({
+  //     path: "scrappedPosts",
+  //     select: "_id userId title updatedAt preview scrapingUsers commentCount", //commentCount일단 추가
+  //     populate: {
+  //       path: "userId",
+  //       select: "_id nickname profile",
+  //     },
+  //   })
+  //   .lean();
+
+  //aggregate로 저장된 배열 뒤집어서 가져오기
+  const scrapList2 = await User.aggregate([
     {
-      _id: userId,
+      $match: {
+        _id: userId,
+      },
     },
     {
-      // 배열 형태인 필드 읽는 범위 조절
-      scrappedPosts: { $slice: [(currentPage - 1) * perPage, perPage] },
-    }
-  )
-    .populate({
-      path: "scrappedPosts",
-      select: "_id userId title updatedAt preview scrapingUsers commentCount", //commentCount일단 추가
-      populate: {
-        path: "userId",
-        select: "_id nickname profile",
+      $project: {
+        scrappedPosts: { $reverseArray: "$scrappedPosts" },
       },
-    })
-    .lean();
+    },
+    {
+      $project: {
+        scrappedPosts: {
+          $slice: ["$scrappedPosts", (currentPage - 1) * perPage, perPage],
+        },
+      },
+    },
+    // {
+    //   $lookup: {
+    //     from: "posts",
+    //     localField: "scrappedPosts",
+    //     foreignField: "_id",
+    //     as: "sp2",
+    //   },
+    // },
+    // { "$unwind": "$sp2" },
+    // pipe
+  ]);
+  // .lookup({
+  //   from: "posts",
+  //   localField: "scrappedPosts",
+  //   foreignField: "_id",
+  //   as: "sp2",
+  // });
 
-  if (scrapList.scrappedPosts.length === 0) {
+  if (scrapList2[0].scrappedPosts.length === 0) {
     return res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
       scrappedPosts: [],
+    });
+  }
+
+  let scrappedPostsList = [];
+
+  const fetchScrappedPosts = async () => {
+    const promises = scrapList2[0].scrappedPosts.map((post) =>
+      Post.findOne({ _id: post })
+        .select("_id userId title updatedAt preview scrapingUsers commentCount")
+        .populate({ path: "userId", select: "_id nickname profile" })
+        .lean()
+        .then((res) => res)
+    );
+
+    scrappedPostsList = await Promise.all(promises);
+  };
+
+  await fetchScrappedPosts();
+
+  //userId -> writer, scrapingUsers -> scrapCount로 변경
+  if (scrappedPostsList) {
+    scrappedPostsList = scrappedPostsList.map((post) => {
+      post.writer = post.userId;
+      console.log(post.writer);
+      post.scrapingCount = post.scrapingUsers.length;
+      delete post.userId;
+      delete post.scrapingUsers;
+      // console.log(post);
+      return post;
+    });
+  }
+
+  return res.status(200).json({
+    scrappedPosts: scrappedPostsList,
+  });
+});
+
+// post 내용 수정 ~
 router.patch("/:postId", authenticateJWT, async (req, res) => {
   const { _id: userId } = req.user;
   const { postId } = req.params;
@@ -481,7 +557,7 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
         preview: {
           text: prevText,
           img: prevImg?.data.url,
-        }
+        },
       }
     );
   } catch (error) {
