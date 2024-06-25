@@ -218,15 +218,14 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
       title: post.title,
       content: post.content,
       public: post.public,
-      writedAt:
-        post.createdAt > post.updatedAt ? post.createAt : post.updatedAt,
-
+      writedAt: post.createdAt,
       writer: {
         writerId: writer._id,
         name: writer.nickname,
         img: writer.profile,
       },
       isScrapped: isScrapped,
+      scrapingCount: post.scrapingUsers.length,
     });
   } catch (err) {
     console.log(err);

@@ -8,7 +8,17 @@ const { ObjectId } = require("mongodb");
 
 router.get("/:postId", async (req, res) => {
   res.json(
-    await Comment.find({ postId: req.params.postId }).populate("replies")
+    (comments = await Comment.find({ postId: req.params.postId }).populate([
+      {
+        path: "replies",
+        populate: {
+          path: "writerId",
+          name: "writer",
+          select: "nickname profile",
+        },
+      },
+      { path: "writerId", name: "writer", select: "nickname profile" },
+    ]))
   );
 });
 
