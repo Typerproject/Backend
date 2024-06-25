@@ -132,7 +132,7 @@ router.get("/list", makeUserInfo, async (req, res) => {
           public: ele.public,
           writer: {
             id: ele.userId._id,
-            name: ele.userId.nickname,
+            nickname: ele.userId.nickname,
             img: ele.userId.profile,
           },
           commentCount: ele.commentCount,
