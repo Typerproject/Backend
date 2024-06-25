@@ -34,15 +34,7 @@ const postSchema = new mongoose.Schema(
     preview: { type: previewSchema, require: true },
   },
   {
-    timestamps: {
-      currentTime: () => {
-        let date = new Date();
-        let newDate = new Date(
-          date.getTime() + date.getTimezoneOffset() * 60 * 1000 * -1
-        );
-        return newDate;
-      },
-    },
+    timestamps: true,
     versionKey: false,
     toJSON: {
       virtuals: true,
