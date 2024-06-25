@@ -8,6 +8,49 @@ const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
 const { makeUserInfo } = require("../utils/makeUserInfo");
 
+router.get("/random", async (req, res) => {
+  try {
+    const randomPosts = await Post.aggregate([
+      { $sample: { size: 10 } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "writer",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          preview: 1,
+          userId: 1,
+          writer: {
+            $arrayElemAt: [
+              {
+                $map: {
+                  input: "$writer",
+                  as: "w",
+                  in: {
+                    nickname: "$$w.nickname",
+                    profile: "$$w.profile",
+                  },
+                },
+              },
+              0,
+            ],
+          },
+        },
+      },
+    ]);
+
+    return res.status(200).json({ randomPosts });
+  } catch (error) {
+    res.status(500).json({ message: "random api 에러", error: error });
+  }
+});
+
 router.get("/list", makeUserInfo, async (req, res) => {
   try {
     const perPage = 10;
@@ -23,6 +66,13 @@ router.get("/list", makeUserInfo, async (req, res) => {
           query.userId = { $in: follow.following_userId };
         }
       }
+    }
+
+    if (req.query.type === "follow" && !req.userId) {
+      res.status(401).json({
+        msg: "팔로우한 사람의 포스트를 보려면 로그인이 필요합니다.",
+      });
+      return;
     }
 
     let result;
@@ -373,15 +423,13 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   )
     .populate({
       path: "scrappedPosts",
-      select: "_id userId title updatedAt preview",
+      select: "_id userId title updatedAt preview scrapingUsers commentCount", //commentCount일단 추가
       populate: {
         path: "userId",
         select: "_id nickname profile",
       },
     })
     .lean();
-  console.log("[", (currentPage - 1) * perPage, perPage, "]");
-  console.log(scrapList.scrappedPosts.length);
 
   if (scrapList.scrappedPosts.length === 0) {
     return res.status(200).json({
@@ -394,13 +442,18 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   if (scrapList.scrappedPosts) {
     scrapList.scrappedPosts = scrapList.scrappedPosts.map((post) => {
       post.writer = post.userId;
+      post.scrapingCount = post.scrapingUsers.length;
       delete post.userId;
+      delete post.scrapingUsers;
       return post;
     });
   }
 
+  const scrapListReverse = scrapList.scrappedPosts.reverse();
+
   return res.status(200).json({
-    scrappedPosts: scrapList.scrappedPosts,
+    // scrappedPosts: scrapList.scrappedPosts,
+    scrappedPosts: scrapListReverse,
   });
 });
 
