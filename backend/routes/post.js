@@ -172,8 +172,10 @@ router.post("/", authenticateJWT, async (req, res) => {
   }, "");
 
   const prevImg = body.content.blocks.find((item) => {
-    item.type === "img";
+    return item.type === "image";
   });
+
+  console.log(prevImg);
 
   Post.create({
     userId: user._id,
