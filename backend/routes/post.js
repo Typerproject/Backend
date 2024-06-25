@@ -168,9 +168,7 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
       title: post.title,
       content: post.content,
       public: post.public,
-      writedAt:
-        post.createdAt > post.updatedAt ? post.createAt : post.updatedAt,
-
+      writedAt: post.createdAt,
       writer: {
         writerId: writer._id,
         name: writer.nickname,
@@ -368,7 +366,8 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
     {
       _id: userId,
     },
-    { // 배열 형태인 필드 읽는 범위 조절
+    {
+      // 배열 형태인 필드 읽는 범위 조절
       scrappedPosts: { $slice: [(currentPage - 1) * perPage, perPage] },
     }
   )
@@ -381,7 +380,7 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
       },
     })
     .lean();
-    console.log('[', (currentPage - 1) * perPage, perPage, ']');
+  console.log("[", (currentPage - 1) * perPage, perPage, "]");
   console.log(scrapList.scrappedPosts.length);
 
   if (scrapList.scrappedPosts.length === 0) {
