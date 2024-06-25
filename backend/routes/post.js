@@ -1,6 +1,7 @@
 var express = require("express");
 var router = express.Router();
 const Post = require("../model/post");
+const { Comment, Reply } = require("../model/comment");
 const User = require("../model/user");
 const Follower = require("../model/follower");
 const { ObjectId } = require("mongodb");
@@ -172,8 +173,10 @@ router.post("/", authenticateJWT, async (req, res) => {
   }, "");
 
   const prevImg = body.content.blocks.find((item) => {
-    item.type === "img";
+    return item.type === "image";
   });
+
+  console.log(prevImg);
 
   Post.create({
     userId: user._id,
@@ -234,6 +237,50 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
       reason: err,
     });
   }
+});
+
+router.delete("/:postId", authenticateJWT, async (req, res) => {
+  const { _id: userId } = req.user;
+  const postId = req.params.postId;
+  if (!postId) {
+    return res.status(400).json({
+      msg: "postId는 필수 입력 값입니다.",
+    });
+  }
+
+  if (!userId) {
+    return res.status(404).json({
+      msg: "user 정보를 찾을 수 없습니다.",
+    });
+  }
+
+  const targetPost = await Post.findById(postId);
+
+  if (targetPost.userId.toString() !== userId.toString()) {
+    res.status(401).json({
+      msg: `포스트 삭제는 직접 작성한 유저만 가능합니다. 현재 유저: ${
+        userId.toString
+      }   포스트 유저: ${targetPost.userId.toString()}`,
+    });
+  }
+
+  const result = await Post.deleteOne({ _id: postId });
+
+  if (result.deletedCount === 1) {
+    await Comment.deleteMany({ postId: postId });
+    await Reply.deleteMany({ postId: postId });
+
+    res.json({
+      msg: "포스트 삭제 완료",
+      body: result,
+    });
+    return;
+  }
+
+  res.status(500).json({
+    msg: "포스트 삭제 실패",
+    body: result,
+  });
 });
 
 router.patch("/scrap", authenticateJWT, async (req, res) => {
