@@ -572,7 +572,7 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
 
   // writer랑 user id가 같은지도 화긴
   const { userId: writerId } = await Post.findById(postId);
-  
+
   if (!writerId.equals(userId)) {
     return res.status(403).json({
       msg: "post의 writer만 내용을 수정할 수 있습니다.",
@@ -589,9 +589,7 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
     return acc;
   }, "");
 
-  const prevImg = body.content.blocks.find((item) => {
-    item.type === "img";
-  });
+  const prevImg = body.content.blocks.find((item) => item.type === "image");
 
   // content, preview update
   let result;
