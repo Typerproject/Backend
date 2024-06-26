@@ -30,14 +30,14 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use(cors({ origin: ["http://localhost:5173","http://typer.kro.kr/","https://typer.kro.kr"], credentials: true }));
 app.use("/api", apiRouter);
-app.use("/auth", authRouter);
+app.use("/api/auth", authRouter);
 
-app.use("/search",searchRouter);
-app.use("/user", userRouter);
-app.use("/post", postRouter);
-app.use("/comment", commentRouter);
+app.use("/api/search",searchRouter);
+app.use("/api/user", userRouter);
+app.use("/api/post", postRouter);
+app.use("/api/comment", commentRouter);
 
-app.use("/shinhan",shinhanRouter);
+app.use("/api/shinhan",shinhanRouter);
 
 
 //mongodb연결을위해 비밀번호 가림
