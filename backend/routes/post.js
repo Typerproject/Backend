@@ -166,13 +166,26 @@ router.post("/", authenticateJWT, async (req, res) => {
     return;
   }
 
-  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
-    if (cur.type === "paragraph") {
-      let dom = parser.parse(cur.data.text);
-      return acc + " " + dom.textContent;
+  let prevText = "";
+
+  for (const block of body.content.blocks) {
+    if (block.type === "paragraph") {
+      let dom = parser.parse(block.data.text);
+      prevText += " " + dom.textContent;
     }
-    return acc;
-  }, "");
+
+    if (prevText.length >= 100) {
+      break;
+    }
+  }
+
+  // const prevText = body.content.blocks.reduce((acc, cur, idx) => {
+  //   if (cur.type === "paragraph") {
+  //     let dom = parser.parse(cur.data.text);
+  //     return acc + " " + dom.textContent;
+  //   }
+  //   return acc;
+  // }, "");
 
   const prevImg = body.content.blocks.find((item) => {
     return item.type === "image";
@@ -585,13 +598,18 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
   // block이 blockSchema 형식에 맞는지 check.. 해야 할까?
 
   // preview update 해야 함
-  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
-    if (cur.type === "paragraph") {
-      let dom = parser.parse(cur.data.text);
-      return acc + " " + dom.textContent;
+  let prevText = "";
+
+  for (const block of body.content.blocks) {
+    if (block.type === "paragraph") {
+      let dom = parser.parse(block.data.text);
+      prevText += " " + dom.textContent;
     }
-    return acc;
-  }, "");
+
+    if (prevText.length >= 100) {
+      break;
+    }
+  }
 
   const prevImg = body.content.blocks.find((item) => item.type === "image");
 
