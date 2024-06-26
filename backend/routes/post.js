@@ -8,6 +8,7 @@ const { ObjectId } = require("mongodb");
 const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
 const { makeUserInfo } = require("../utils/makeUserInfo");
+const parser = require("node-html-parser");
 
 router.get("/random", async (req, res) => {
   try {
@@ -167,7 +168,8 @@ router.post("/", authenticateJWT, async (req, res) => {
 
   const prevText = body.content.blocks.reduce((acc, cur, idx) => {
     if (cur.type === "paragraph") {
-      return acc + " " + cur.data.text;
+      let dom = parser.parse(cur.data.text);
+      return acc + " " + dom.textContent;
     }
     return acc;
   }, "");
@@ -585,7 +587,8 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
   // preview update 해야 함
   const prevText = body.content.blocks.reduce((acc, cur, idx) => {
     if (cur.type === "paragraph") {
-      return acc + " " + cur.data.text;
+      let dom = parser.parse(cur.data.text);
+      return acc + " " + dom.textContent;
     }
     return acc;
   }, "");
