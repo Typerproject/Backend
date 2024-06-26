@@ -166,13 +166,18 @@ router.post("/", authenticateJWT, async (req, res) => {
     return;
   }
 
-  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
-    if (cur.type === "paragraph") {
-      let dom = parser.parse(cur.data.text);
-      return acc + " " + dom.textContent;
+  let prevText = "";
+
+  for (const block of body.content.blocks) {
+    if (block.type === "paragraph") {
+      let dom = parser.parse(block.data.text);
+      prevText += " " + dom.textContent;
     }
-    return acc;
-  }, "");
+
+    if (prevText.length >= 100) {
+      break;
+    }
+  }
 
   const prevImg = body.content.blocks.find((item) => {
     return item.type === "image";
@@ -264,25 +269,43 @@ router.delete("/:postId", authenticateJWT, async (req, res) => {
         userId.toString
       }   포스트 유저: ${targetPost.userId.toString()}`,
     });
-  }
-
-  const result = await Post.deleteOne({ _id: postId });
-
-  if (result.deletedCount === 1) {
-    await Comment.deleteMany({ postId: postId });
-    await Reply.deleteMany({ postId: postId });
-
-    res.json({
-      msg: "포스트 삭제 완료",
-      body: result,
-    });
     return;
   }
 
-  res.status(500).json({
-    msg: "포스트 삭제 실패",
-    body: result,
-  });
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const updateRes = await User.updateMany(
+      { _id: { $in: targetPost.scrapingUsers } },
+      { $pull: { scrappedPosts: { $in: [targetPost._id] } } }
+    );
+
+    console.log(updateRes);
+
+    const result = await Post.deleteOne({ _id: postId });
+
+    if (result.deletedCount === 1) {
+      await Comment.deleteMany({ postId: postId });
+      await Reply.deleteMany({ postId: postId });
+
+      await session.commitTransaction(); // 성공 시 커밋
+
+      res.json({
+        msg: "포스트 삭제 완료",
+        body: result,
+      });
+      return;
+    }
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({
+      msg: "포스트 삭제 실패",
+      body: result,
+      reason: err,
+    });
+  }
 });
 
 router.patch("/scrap", authenticateJWT, async (req, res) => {
@@ -459,29 +482,6 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   const perPage = 10;
   const currentPage = req.query.page || 1;
 
-  // { <arrayField>: { $slice: [ <number>, <number> ] } }
-
-  // 옛날 코드
-  // const scrapList = await User.findOne(
-  //   {
-  //     _id: userId,
-  //   },
-  //   {
-  //     // 배열 형태인 필드 읽는 범위 조절
-  //     scrappedPosts: { $slice: [(currentPage - 1) * perPage, perPage] },
-  //   }
-  // )
-  //   .populate({
-  //     path: "scrappedPosts",
-  //     select: "_id userId title updatedAt preview scrapingUsers commentCount", //commentCount일단 추가
-  //     populate: {
-  //       path: "userId",
-  //       select: "_id nickname profile",
-  //     },
-  //   })
-  //   .lean();
-
-  //aggregate로 저장된 배열 뒤집어서 가져오기
   const scrapList2 = await User.aggregate([
     {
       $match: {
@@ -500,23 +500,7 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
         },
       },
     },
-    // {
-    //   $lookup: {
-    //     from: "posts",
-    //     localField: "scrappedPosts",
-    //     foreignField: "_id",
-    //     as: "sp2",
-    //   },
-    // },
-    // { "$unwind": "$sp2" },
-    // pipe
   ]);
-  // .lookup({
-  //   from: "posts",
-  //   localField: "scrappedPosts",
-  //   foreignField: "_id",
-  //   as: "sp2",
-  // });
 
   if (scrapList2[0].scrappedPosts.length === 0) {
     return res.status(200).json({
@@ -585,13 +569,18 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
   // block이 blockSchema 형식에 맞는지 check.. 해야 할까?
 
   // preview update 해야 함
-  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
-    if (cur.type === "paragraph") {
-      let dom = parser.parse(cur.data.text);
-      return acc + " " + dom.textContent;
+  let prevText = "";
+
+  for (const block of body.content.blocks) {
+    if (block.type === "paragraph") {
+      let dom = parser.parse(block.data.text);
+      prevText += " " + dom.textContent;
     }
-    return acc;
-  }, "");
+
+    if (prevText.length >= 100) {
+      break;
+    }
+  }
 
   const prevImg = body.content.blocks.find((item) => item.type === "image");
 
