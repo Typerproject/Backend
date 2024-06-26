@@ -1,5 +1,6 @@
 var express = require("express");
 var router = express.Router();
+const ObjectId = require("mongoose").Types.ObjectId;
 
 const User = require("../model/user");
 const Follower = require("../model/follower");
@@ -65,6 +66,36 @@ router.get("/info/:_id", makeUserInfo, async (req, res, next) => {
     console.error("마이페이지에 유저 정보를 띄우기 위한 api 에러: ", error);
     next(error);
   }
+});
+
+router.get("/info/post/:userId", makeUserInfo, async (req, res) => {
+  const userId = req.params.userId;
+  const cookieId = req.userId ? req.userId : "";
+
+  const perPage = 10;
+  const currentPage = req.query.page || 1;
+
+  const postList = await Post.find({ userId: new ObjectId(userId) })
+    .skip((currentPage - 1) * perPage)
+    .limit(perPage)
+    .sort({ createdAt: -1 });
+
+  res.json(
+    postList.map((ele) => {
+      return {
+        title: ele.title,
+        _id: ele._id,
+        preview: ele.preview,
+        createdAt: ele.createdAt,
+        public: ele.public,
+        scrapingCount: ele.scrapingUsers.length,
+        isScrapped: ele.scrapingUsers.some((id) => {
+          return id.equals(cookieId);
+        }),
+        commentCount: ele.commentCount,
+      };
+    })
+  );
 });
 
 // 유저의 팔로워 수와 팔로우 한 사람의 수 + 유저 리스트까지
