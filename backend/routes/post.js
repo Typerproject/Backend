@@ -8,6 +8,7 @@ const { ObjectId } = require("mongodb");
 const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
 const { makeUserInfo } = require("../utils/makeUserInfo");
+const parser = require("node-html-parser");
 
 router.get("/random", async (req, res) => {
   try {
@@ -167,7 +168,8 @@ router.post("/", authenticateJWT, async (req, res) => {
 
   const prevText = body.content.blocks.reduce((acc, cur, idx) => {
     if (cur.type === "paragraph") {
-      return acc + " " + cur.data.text;
+      let dom = parser.parse(cur.data.text);
+      return acc + " " + dom.textContent;
     }
     return acc;
   }, "");
@@ -541,15 +543,16 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
 
   //userId -> writer, scrapingUsers -> scrapCount로 변경
   if (scrappedPostsList) {
-    scrappedPostsList = scrappedPostsList.map((post) => {
-      post.writer = post.userId;
-      console.log(post.writer);
-      post.scrapingCount = post.scrapingUsers.length;
-      delete post.userId;
-      delete post.scrapingUsers;
-      // console.log(post);
-      return post;
-    });
+    scrappedPostsList = scrappedPostsList
+      .filter((post) => post !== null)
+      .map((post) => {
+        post.writer = post.userId;
+        post.scrapingCount = post.scrapingUsers.length;
+        delete post.userId;
+        delete post.scrapingUsers;
+        // console.log(post);
+        return post;
+      });
   }
 
   return res.status(200).json({
@@ -584,7 +587,8 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
   // preview update 해야 함
   const prevText = body.content.blocks.reduce((acc, cur, idx) => {
     if (cur.type === "paragraph") {
-      return acc + " " + cur.data.text;
+      let dom = parser.parse(cur.data.text);
+      return acc + " " + dom.textContent;
     }
     return acc;
   }, "");

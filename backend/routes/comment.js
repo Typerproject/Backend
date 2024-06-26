@@ -8,7 +8,10 @@ const { ObjectId } = require("mongodb");
 
 router.get("/:postId", async (req, res) => {
   res.json(
-    (comments = await Comment.find({ postId: req.params.postId }).populate([
+    (comments = await Comment.find({
+      postId: req.params.postId,
+      isDeleted: false,
+    }).populate([
       {
         path: "replies",
         populate: {
@@ -143,7 +146,8 @@ router.post("/reply", authenticateJWT, async (req, res) => {
 
 // 댓글 삭제
 router.delete("/:commentId", authenticateJWT, async (req, res) => {
-  const commentId = req.params.commentId;
+  console.log(req.params.commentId);
+  const commentId = new ObjectId(req.params.commentId);
 
   if (!commentId) {
     return res.status(400).json({
