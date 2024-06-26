@@ -541,15 +541,16 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
 
   //userId -> writer, scrapingUsers -> scrapCount로 변경
   if (scrappedPostsList) {
-    scrappedPostsList = scrappedPostsList.map((post) => {
-      post.writer = post.userId;
-      console.log(post.writer);
-      post.scrapingCount = post.scrapingUsers.length;
-      delete post.userId;
-      delete post.scrapingUsers;
-      // console.log(post);
-      return post;
-    });
+    scrappedPostsList = scrappedPostsList
+      .filter((post) => post !== null)
+      .map((post) => {
+        post.writer = post.userId;
+        post.scrapingCount = post.scrapingUsers.length;
+        delete post.userId;
+        delete post.scrapingUsers;
+        // console.log(post);
+        return post;
+      });
   }
 
   return res.status(200).json({
