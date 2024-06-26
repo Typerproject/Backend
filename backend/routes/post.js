@@ -1,12 +1,14 @@
 var express = require("express");
 var router = express.Router();
 const Post = require("../model/post");
+const { Comment, Reply } = require("../model/comment");
 const User = require("../model/user");
 const Follower = require("../model/follower");
 const { ObjectId } = require("mongodb");
 const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
 const { makeUserInfo } = require("../utils/makeUserInfo");
+const parser = require("node-html-parser");
 
 router.get("/random", async (req, res) => {
   try {
@@ -132,7 +134,7 @@ router.get("/list", makeUserInfo, async (req, res) => {
           public: ele.public,
           writer: {
             id: ele.userId._id,
-            name: ele.userId.nickname,
+            nickname: ele.userId.nickname,
             img: ele.userId.profile,
           },
           commentCount: ele.commentCount,
@@ -164,16 +166,24 @@ router.post("/", authenticateJWT, async (req, res) => {
     return;
   }
 
-  const prevText = body.content.blocks.reduce((acc, cur, idx) => {
-    if (cur.type === "paragraph") {
-      return acc + " " + cur.data.text;
+  let prevText = "";
+
+  for (const block of body.content.blocks) {
+    if (block.type === "paragraph") {
+      let dom = parser.parse(block.data.text);
+      prevText += " " + dom.textContent;
     }
-    return acc;
-  }, "");
+
+    if (prevText.length >= 100) {
+      break;
+    }
+  }
 
   const prevImg = body.content.blocks.find((item) => {
-    item.type === "img";
+    return item.type === "image";
   });
+
+  console.log(prevImg);
 
   Post.create({
     userId: user._id,
@@ -231,6 +241,68 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
     console.log(err);
     res.status(500).json({
       msg: "post불러오기 중 예외 발생",
+      reason: err,
+    });
+  }
+});
+
+router.delete("/:postId", authenticateJWT, async (req, res) => {
+  const { _id: userId } = req.user;
+  const postId = req.params.postId;
+  if (!postId) {
+    return res.status(400).json({
+      msg: "postId는 필수 입력 값입니다.",
+    });
+  }
+
+  if (!userId) {
+    return res.status(404).json({
+      msg: "user 정보를 찾을 수 없습니다.",
+    });
+  }
+
+  const targetPost = await Post.findById(postId);
+
+  if (targetPost.userId.toString() !== userId.toString()) {
+    res.status(401).json({
+      msg: `포스트 삭제는 직접 작성한 유저만 가능합니다. 현재 유저: ${
+        userId.toString
+      }   포스트 유저: ${targetPost.userId.toString()}`,
+    });
+    return;
+  }
+
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const updateRes = await User.updateMany(
+      { _id: { $in: targetPost.scrapingUsers } },
+      { $pull: { scrappedPosts: { $in: [targetPost._id] } } }
+    );
+
+    console.log(updateRes);
+
+    const result = await Post.deleteOne({ _id: postId });
+
+    if (result.deletedCount === 1) {
+      await Comment.deleteMany({ postId: postId });
+      await Reply.deleteMany({ postId: postId });
+
+      await session.commitTransaction(); // 성공 시 커밋
+
+      res.json({
+        msg: "포스트 삭제 완료",
+        body: result,
+      });
+      return;
+    }
+  } catch (err) {
+    await session.abortTransaction();
+    res.status(500).json({
+      msg: "포스트 삭제 실패",
+      body: result,
       reason: err,
     });
   }
@@ -410,50 +482,132 @@ router.get("/scrap/list", authenticateJWT, async (req, res) => {
   const perPage = 10;
   const currentPage = req.query.page || 1;
 
-  // { <arrayField>: { $slice: [ <number>, <number> ] } }
-
-  const scrapList = await User.findOne(
+  const scrapList2 = await User.aggregate([
     {
-      _id: userId,
+      $match: {
+        _id: userId,
+      },
     },
     {
-      // 배열 형태인 필드 읽는 범위 조절
-      scrappedPosts: { $slice: [(currentPage - 1) * perPage, perPage] },
-    }
-  )
-    .populate({
-      path: "scrappedPosts",
-      select: "_id userId title updatedAt preview scrapingUsers commentCount", //commentCount일단 추가
-      populate: {
-        path: "userId",
-        select: "_id nickname profile",
+      $project: {
+        scrappedPosts: { $reverseArray: "$scrappedPosts" },
       },
-    })
-    .lean();
+    },
+    {
+      $project: {
+        scrappedPosts: {
+          $slice: ["$scrappedPosts", (currentPage - 1) * perPage, perPage],
+        },
+      },
+    },
+  ]);
 
-  if (scrapList.scrappedPosts.length === 0) {
+  if (scrapList2[0].scrappedPosts.length === 0) {
     return res.status(200).json({
       msg: "스크랩한 post가 없습니다.", //없다고 메세지로 알려주고 싶음
       scrappedPosts: [],
     });
   }
 
-  //userId -> writer로 변경
-  if (scrapList.scrappedPosts) {
-    scrapList.scrappedPosts = scrapList.scrappedPosts.map((post) => {
-      post.writer = post.userId;
-      post.scrapingCount = post.scrapingUsers.length;
-      delete post.userId;
-      delete post.scrapingUsers;
-      return post;
+  let scrappedPostsList = [];
+
+  const fetchScrappedPosts = async () => {
+    const promises = scrapList2[0].scrappedPosts.map((post) =>
+      Post.findOne({ _id: post })
+        .select("_id userId title updatedAt preview scrapingUsers commentCount")
+        .populate({ path: "userId", select: "_id nickname profile" })
+        .lean()
+        .then((res) => res)
+    );
+
+    scrappedPostsList = await Promise.all(promises);
+  };
+
+  await fetchScrappedPosts();
+
+  //userId -> writer, scrapingUsers -> scrapCount로 변경
+  if (scrappedPostsList) {
+    scrappedPostsList = scrappedPostsList
+      .filter((post) => post !== null)
+      .map((post) => {
+        post.writer = post.userId;
+        post.scrapingCount = post.scrapingUsers.length;
+        delete post.userId;
+        delete post.scrapingUsers;
+        // console.log(post);
+        return post;
+      });
+  }
+
+  return res.status(200).json({
+    scrappedPosts: scrappedPostsList,
+  });
+});
+
+// post 내용 수정 ~
+router.patch("/:postId", authenticateJWT, async (req, res) => {
+  const { _id: userId } = req.user;
+  const { postId } = req.params;
+  // const { content } = req.body;
+  const body = req.body;
+
+  if (!postId) {
+    return res.status(400).json({
+      msg: "postId는 필수 입력 값입니다.",
     });
   }
 
-  const scrapListReverse = scrapList.scrappedPosts.reverse();
+  // writer랑 user id가 같은지도 화긴
+  const { userId: writerId } = await Post.findById(postId);
+
+  if (!writerId.equals(userId)) {
+    return res.status(403).json({
+      msg: "post의 writer만 내용을 수정할 수 있습니다.",
+    });
+  }
+
+  // block이 blockSchema 형식에 맞는지 check.. 해야 할까?
+
+  // preview update 해야 함
+  let prevText = "";
+
+  for (const block of body.content.blocks) {
+    if (block.type === "paragraph") {
+      let dom = parser.parse(block.data.text);
+      prevText += " " + dom.textContent;
+    }
+
+    if (prevText.length >= 100) {
+      break;
+    }
+  }
+
+  const prevImg = body.content.blocks.find((item) => item.type === "image");
+
+  // content, preview update
+  let result;
+  try {
+    result = await Post.updateOne(
+      { _id: postId },
+      {
+        title: body?.title,
+        content: body.content,
+        preview: {
+          text: prevText,
+          img: prevImg?.data.url,
+        },
+      }
+    );
+  } catch (error) {
+    return res.status(500).json({
+      msg: "post update error",
+      reason: error,
+    });
+  }
 
   return res.status(200).json({
-    // scrappedPosts: scrapList.scrappedPosts,
-    scrappedPosts: scrapListReverse,
+    //수정 완료 시
+    result,
   });
 });
 
