@@ -105,10 +105,10 @@ router.get("/list", makeUserInfo, async (req, res) => {
           },
         },
         {
-          $limit: perPage,
+          $skip: (currentPage - 1) * perPage,
         },
         {
-          $skip: (currentPage - 1) * perPage,
+          $limit: perPage,
         },
       ]);
 
@@ -233,6 +233,7 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
         writerId: writer._id,
         name: writer.nickname,
         img: writer.profile,
+        comment: writer.comment,
       },
       isScrapped: isScrapped,
       scrapingCount: post.scrapingUsers.length,

@@ -97,7 +97,7 @@ router.get("/report/:code", async (req, res) => {
     }
   });
 
-  doc("head").append("<style>.target:hover{background-color: yellow}</style>");
+  doc("head").append("<style>.target:hover{background-color: #C1E5F1}</style>");
 
   res.send({
     type: type == "HTML" ? "HTML" : "Dart",
