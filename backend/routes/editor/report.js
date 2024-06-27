@@ -25,8 +25,11 @@ router.get("/", async function (req, res) {
 
     const data = response.data;
 
-    if (data.data.length !== 0) {
-      data.data.map((elem, idx) => {
+
+    if (data.data && Object.keys(data.data).length !== 0) {
+      const dataArray = Array.isArray(data.data) ? data.data : Object.values(data.data);
+    
+      dataArray.map((elem) => {
         if (elem.REPORT_DATE < "2024-06-08") {
           return;
         }
