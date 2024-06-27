@@ -7,8 +7,13 @@ const User = require("../model/user");
 
 router.get("/",async (req,res)=>{
 
-    const search=req.query.value;
     const page=Number(req.query.page);
+
+    const search = req.query.value || '';
+
+    if (search.lenghth<2 || /^[.,!?]*$/.test(search)){
+      return res.status(400).json({error:'허용되지않는 문자입니다.'})
+    }
     
 
     const limit=5
@@ -22,8 +27,7 @@ router.get("/",async (req,res)=>{
           { 'preview.text': { $regex: search, $options: 'i' } }
         ]
       }).sort({createdAt:1}).skip(start).limit(5)
-      
-    console.log(result)
+
       const total=await Post.countDocuments({$or: [
         { title: { $regex: search, $options: 'i' } },
         { 'preview.text': { $regex: search, $options: 'i' } }
