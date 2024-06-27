@@ -12,7 +12,7 @@ const userRouter = require("./routes/user");
 
 const postRouter = require("./routes/post");
 const commentRouter = require("./routes/comment");
-const shinhanRouter=require('./routes/shinhanapi');
+const shinhanRouter = require("./routes/shinhanapi");
 
 const cors = require("cors");
 
@@ -23,22 +23,30 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
 app.use(logger("dev"));
-app.use(express.json({limit:'100mb'}));
-app.use(express.urlencoded({  limit:'100mb',extended: false }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use(cors({ origin: ["http://localhost:5173","http://typer.kro.kr/","https://typer.kro.kr"], credentials: true }));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://typer.kro.kr/",
+      "https://typer.kro.kr",
+    ],
+    credentials: true,
+  })
+);
 app.use("/api", apiRouter);
 app.use("/api/auth", authRouter);
 
-app.use("/api/search",searchRouter);
+app.use("/api/search", searchRouter);
 app.use("/api/user", userRouter);
 app.use("/api/post", postRouter);
 app.use("/api/comment", commentRouter);
 
-app.use("/api/shinhan",shinhanRouter);
-
+app.use("/api/shinhan", shinhanRouter);
 
 //mongodb연결을위해 비밀번호 가림
 const dotenv = require("dotenv");
@@ -58,7 +66,7 @@ app.use(function (req, res, next) {
 });
 
 app.listen(() => {
-  getOAuth();
+  // getOAuth();
 });
 
 // error handler

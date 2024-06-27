@@ -7,22 +7,35 @@ const Post = require("../model/post");
 const { ObjectId } = require("mongodb");
 
 router.get("/:postId", async (req, res) => {
-  res.json(
-    (comments = await Comment.find({
-      postId: req.params.postId,
-      isDeleted: false,
-    }).populate([
-      {
-        path: "replies",
-        populate: {
-          path: "writerId",
-          name: "writer",
-          select: "nickname profile",
+  try {
+    const target = await Post.findById(req.params.postId);
+
+    if (!target) {
+      res.status(404).json({ msg: "존재하지 않는 postId" });
+      return;
+    }
+
+    res.json(
+      (comments = await Comment.find({
+        postId: req.params.postId,
+        isDeleted: false,
+      }).populate([
+        {
+          path: "replies",
+          populate: {
+            path: "writerId",
+            name: "writer",
+            select: "nickname profile",
+          },
         },
-      },
-      { path: "writerId", name: "writer", select: "nickname profile" },
-    ]))
-  );
+        { path: "writerId", name: "writer", select: "nickname profile" },
+      ]))
+    );
+  } catch (err) {
+    res.status(404).json({
+      reason: err,
+    });
+  }
 });
 
 // 댓글 쓰기

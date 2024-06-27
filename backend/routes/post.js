@@ -233,6 +233,7 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
         writerId: writer._id,
         name: writer.nickname,
         img: writer.profile,
+        comment: writer.comment,
       },
       isScrapped: isScrapped,
       scrapingCount: post.scrapingUsers.length,
