@@ -105,10 +105,10 @@ router.get("/list", makeUserInfo, async (req, res) => {
           },
         },
         {
-          $limit: perPage,
+          $skip: (currentPage - 1) * perPage,
         },
         {
-          $skip: (currentPage - 1) * perPage,
+          $limit: perPage,
         },
       ]);
 

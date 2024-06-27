@@ -61,6 +61,9 @@ userSchema.statics.enroll = async function (
       _id: user._id,
       userId: user.userId,
       nickname: user.nickname,
+      email: user.email,
+      comment: user.comment,
+      profile: user.profile,
     };
   } catch (error) {
     throw error;
