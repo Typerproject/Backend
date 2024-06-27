@@ -71,13 +71,23 @@ app.listen(() => {
 
 // error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
+  if (err instanceof mongoose.Error.CastError) {
+    // CastError 처리
+    const errorMessage = `Invalid value for ${err.path}: ${err.value}`;
+    console.error(errorMessage); // 서버 로그에 오류 기록
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render("error");
+    return res.status(400).json({
+      error: "InvalidObjectId",
+      message: errorMessage,
+      path: err.path,
+      value: err.value,
+      kind: err.kind,
+    });
+  }
+  res.status(500).json({
+    err: err,
+  });
+  return;
 });
 
 module.exports = app;

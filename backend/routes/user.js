@@ -68,34 +68,38 @@ router.get("/info/:_id", makeUserInfo, async (req, res, next) => {
   }
 });
 
-router.get("/info/post/:userId", makeUserInfo, async (req, res) => {
+router.get("/info/post/:userId", makeUserInfo, async (req, res, next) => {
   const userId = req.params.userId;
   const cookieId = req.userId ? req.userId : "";
 
   const perPage = 10;
   const currentPage = req.query.page || 1;
 
-  const postList = await Post.find({ userId: new ObjectId(userId) })
-    .skip((currentPage - 1) * perPage)
-    .limit(perPage)
-    .sort({ createdAt: -1 });
+  try {
+    const postList = await Post.find({ userId: new ObjectId(userId) })
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage)
+      .sort({ createdAt: -1 });
 
-  res.json(
-    postList.map((ele) => {
-      return {
-        title: ele.title,
-        _id: ele._id,
-        preview: ele.preview,
-        createdAt: ele.createdAt,
-        public: ele.public,
-        scrapingCount: ele.scrapingUsers.length,
-        isScrapped: ele.scrapingUsers.some((id) => {
-          return id.equals(cookieId);
-        }),
-        commentCount: ele.commentCount,
-      };
-    })
-  );
+    res.json(
+      postList.map((ele) => {
+        return {
+          title: ele.title,
+          _id: ele._id,
+          preview: ele.preview,
+          createdAt: ele.createdAt,
+          public: ele.public,
+          scrapingCount: ele.scrapingUsers.length,
+          isScrapped: ele.scrapingUsers.some((id) => {
+            return id.equals(cookieId);
+          }),
+          commentCount: ele.commentCount,
+        };
+      })
+    );
+  } catch (error) {
+    next(error);
+  }
 });
 
 // 유저의 팔로워 수와 팔로우 한 사람의 수 + 유저 리스트까지
