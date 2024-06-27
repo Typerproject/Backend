@@ -11,7 +11,7 @@ const previewSchema = new mongoose.Schema({
   img: {
     type: String,
     default:
-      "https://i.guim.co.uk/img/media/8c7f4fe66d305fb86fc3246dd47a9c06d216f7ec/0_139_1268_761/master/1268.jpg?width=1200&height=1200&quality=85&auto=format&fit=crop&s=f27fa05d2f7629655beafeb9248c7647",
+      "https://cdn.pixabay.com/photo/2014/10/04/11/49/typewriter-472850_640.jpg",
   },
 });
 
