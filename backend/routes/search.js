@@ -21,8 +21,9 @@ router.get("/",async (req,res)=>{
           { title: { $regex: search, $options: 'i' } },
           { 'preview.text': { $regex: search, $options: 'i' } }
         ]
-      }).skip(start).limit(5)
-    
+      }).sort({createdAt:1}).skip(start).limit(5)
+      
+    console.log(result)
       const total=await Post.countDocuments({$or: [
         { title: { $regex: search, $options: 'i' } },
         { 'preview.text': { $regex: search, $options: 'i' } }
@@ -34,6 +35,8 @@ router.get("/",async (req,res)=>{
                     
         const new_array = await Promise.all(result.map(async (elem, idx) => {
         const response = await User.findOne({ _id: elem.userId }); 
+
+        
 
         const nick = response ? response.nickname : 'Unknown';
         const profile = response.profile;
