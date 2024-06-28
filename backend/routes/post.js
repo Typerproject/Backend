@@ -260,6 +260,7 @@ router.get("/:postId", makeUserInfo, async (req, res) => {
     res.json({
       id: post._id,
       title: post.title,
+      image: post.preview.img,
       content: post.content,
       public: post.public,
       writedAt: post.createdAt,

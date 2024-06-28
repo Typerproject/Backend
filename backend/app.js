@@ -65,7 +65,7 @@ app.use(function (req, res, next) {
 });
 
 app.listen(() => {
-  // getOAuth();
+  getOAuth();
 });
 
 // error handler
