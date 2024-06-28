@@ -6,19 +6,21 @@ const axios = require("axios");
 router.get("/", async function (req, res) {
   try {
     const name = req.query.company;
-    const startdate = parseInt(req.query.startdate, 10); // startdate를 정수로 변환합니다.
-    const enddate = parseInt(req.query.enddate, 10); // enddate를 정수로 변환합니다.
+    const startdate = Number(req.query.startdate); // startdate를 정수로 변환합니다.
+    const enddate = Number(req.query.enddate); // enddate를 정수로 변환합니다.
 
     const codelist = code.result.list;
     const new_code_list = codelist.filter((elem) =>
       elem.corp_name.includes(name)
     );
 
+
     if (new_code_list.length === 0) {
       return res.status(403).json({ error: "Company not found" });
     }
 
     const new_code = new_code_list[0].corp_code[0]; 
+    console.log(new_code)
     // 배열의 첫 번째 요소에서 corp_code를 추출합니다.
     const final = [];
 
@@ -37,14 +39,14 @@ router.get("/", async function (req, res) {
         
       );
 
-      console.log(dart)
+      console.log(dart.data)
 
       const response = dart.data;
       const list = response.list;
     
 
       const targetAccountNames = [
-        "수익(매출액)",
+        "매출액",
         "매출원가",
         "매출총이익",
         "판매비와 관리비",
@@ -60,12 +62,14 @@ router.get("/", async function (req, res) {
         "이익잉여금",
       ];
 
+      const regexList = targetAccountNames.map(name => new RegExp(name, 'i'));
+
       const new_list = list
-        .filter((item) => targetAccountNames.includes(item.account_nm))
-        .map((elem) => ({
-          account_nm: elem.account_nm,
-          bsns_year: elem.bsns_year,
-          thstrm_amount: elem.thstrm_amount,
+        .filter(item => regexList.some(regex => regex.test(item.account_nm)))
+        .map(elem => ({
+        account_nm: elem.account_nm,
+        bsns_year: elem.bsns_year,
+        thstrm_amount: elem.thstrm_amount,
         }));
 
       final.push(...new_list); // new_list의 내용을 final 배열에 추가합니다.
