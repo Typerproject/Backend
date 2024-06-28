@@ -20,7 +20,15 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const decodeImg = async (base64) => {
+const decodeImg = async (url) => {
+  const array = url.split(",");
+
+  if (array.length < 2) {
+    return url;
+  }
+
+  const base64 = array[1];
+
   const buffer = Buffer.from(base64, "base64");
   const fileName = `${uuidv4()}.jpg`;
 
@@ -209,8 +217,7 @@ router.post("/", authenticateJWT, async (req, res) => {
     }
 
     if (block.type === "image") {
-      const url = await decodeImg(block.data.url.split(",")[1]);
-      console.log(url);
+      const url = await decodeImg(block.data.url);
       block.data.url = url;
     }
   }
@@ -327,6 +334,27 @@ router.delete("/:postId", authenticateJWT, async (req, res) => {
       await Reply.deleteMany({ postId: postId });
 
       await session.commitTransaction(); // 성공 시 커밋
+
+      var params = {
+        Bucket: "typer-static",
+        Delete: {
+          Objects: targetPost.content.blocks.map((block) => {
+            if (block.type === "image") {
+              console.log(block.data.url);
+              const array = block.data.url.split("/");
+              console.log(array[array.length - 1]);
+              return {
+                Key: array[array.length - 1],
+              };
+            }
+          }),
+          Quiet: false,
+        },
+      };
+      s3.deleteObjects(params, function (err, data) {
+        if (err) console.log(err, err.stack); // an error occurred
+        else console.log(data); // successful response
+      });
 
       res.json({
         msg: "포스트 삭제 완료",
@@ -611,10 +639,15 @@ router.patch("/:postId", authenticateJWT, async (req, res) => {
     if (block.type === "paragraph") {
       let dom = parser.parse(block.data.text);
       prevText += " " + dom.textContent;
+
+      if (prevText.length >= 100) {
+        continue;
+      }
     }
 
-    if (prevText.length >= 100) {
-      break;
+    if (block.type === "image") {
+      const url = await decodeImg(block.data.url);
+      block.data.url = url;
     }
   }
 
