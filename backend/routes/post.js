@@ -9,6 +9,36 @@ const { authenticateJWT } = require("../utils/authenticateJWT");
 const mongoose = require("mongoose");
 const { makeUserInfo } = require("../utils/makeUserInfo");
 const parser = require("node-html-parser");
+const AWS = require("aws-sdk");
+const { v4: uuidv4 } = require("uuid");
+
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS,
+  secretAccessKey: process.env.AWS_SCRET,
+  region: "ap-northeast-2",
+});
+
+const s3 = new AWS.S3();
+
+const decodeImg = async (base64) => {
+  const buffer = Buffer.from(base64, "base64");
+  const fileName = `${uuidv4()}.jpg`;
+
+  const params = {
+    Bucket: "typer-static",
+    Key: fileName,
+    Body: buffer,
+    ContentType: "image/jpeg",
+  };
+
+  try {
+    const res = await s3.upload(params).promise();
+    return res.Location;
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
 
 router.get("/random", async (req, res) => {
   try {
@@ -172,18 +202,22 @@ router.post("/", authenticateJWT, async (req, res) => {
     if (block.type === "paragraph") {
       let dom = parser.parse(block.data.text);
       prevText += " " + dom.textContent;
+
+      if (prevText.length >= 100) {
+        continue;
+      }
     }
 
-    if (prevText.length >= 100) {
-      break;
+    if (block.type === "image") {
+      const url = await decodeImg(block.data.url.split(",")[1]);
+      console.log(url);
+      block.data.url = url;
     }
   }
 
   const prevImg = body.content.blocks.find((item) => {
     return item.type === "image";
   });
-
-  console.log(prevImg);
 
   Post.create({
     userId: user._id,

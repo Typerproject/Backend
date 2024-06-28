@@ -15,6 +15,7 @@ const commentRouter = require("./routes/comment");
 const shinhanRouter = require("./routes/shinhanapi");
 
 const cors = require("cors");
+const AWS = require("aws-sdk");
 
 var app = express();
 
@@ -49,8 +50,6 @@ app.use("/api/comment", commentRouter);
 app.use("/api/shinhan", shinhanRouter);
 
 //mongodb연결을위해 비밀번호 가림
-const dotenv = require("dotenv");
-dotenv.config();
 
 // mongodb 연결
 const mongoose = require("mongoose");
@@ -66,7 +65,7 @@ app.use(function (req, res, next) {
 });
 
 app.listen(() => {
-  getOAuth();
+  // getOAuth();
 });
 
 // error handler
